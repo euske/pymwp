@@ -2,6 +2,8 @@
 # usage:
 #   $ bzip2 -dc jawiki-dumps.xml.bz2 | python2 wp.py
 #
+# TODO: args separate substree
+# TODO: td,tr,table row
 import sys
 from htmlentitydefs import name2codepoint
 from xml.parsers.expat import ParserCreate
