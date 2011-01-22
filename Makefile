@@ -1,14 +1,30 @@
-# Makefile
+##  Makefile
+##
+
+PACKAGE=pywmp
 
 PYTHON=python2
+GIT=git
 RM=rm -f
-
-MWPARSER=$(PYTHON) mwparser.py
+CP=cp -f
 
 all:
 
-clean:
-	-$(RM) out
+install:
+	$(PYTHON) setup.py install --home=$(HOME)
 
-test:
-	$(MWPARSER) jawiki.xml.bz2 >out 2>&1
+clean:
+	-$(PYTHON) setup.py clean
+	-$(RM) -r build dist MANIFEST
+	-cd $(PACKAGE) && $(MAKE) clean
+
+distclean: clean
+
+sdist: distclean MANIFEST.in
+	$(PYTHON) setup.py sdist
+register: distclean MANIFEST.in
+	$(PYTHON) setup.py sdist upload register
+
+WEBDIR=$$HOME/Site/unixuser.org/python/$(PACKAGE)
+publish:
+	$(CP) docs/*.html docs/*.png docs/*.css $(WEBDIR)
