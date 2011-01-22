@@ -1,7 +1,7 @@
 ##  Makefile
 ##
 
-PACKAGE=pywmp
+PACKAGE=pymwp
 
 PYTHON=python2
 GIT=git
