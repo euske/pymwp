@@ -1,14 +1,11 @@
 #!/usr/bin/env python2
-# usage:
-#   $ bzip2 -dc jawiki-dumps.xml.bz2 | python2 wp.py
-#
 import sys
 from xml.parsers.expat import ParserCreate
 
 
-##  WPXMLParser
+##  MWXMLParser
 ##
-class WPXMLParser(object):
+class MWXMLParser(object):
     
     def __init__(self):
         self._expat = ParserCreate()
@@ -70,7 +67,7 @@ class WPXMLParser(object):
 # main
 def main(argv):
     args = argv[1:] or ['-']
-    class Parser(WPXMLParser):
+    class Parser(MWXMLParser):
         def start_revision(self, title, revision):
             sys.stdout.write(title.encode('utf-8')+'\n')
             return
@@ -81,6 +78,7 @@ def main(argv):
             sys.stdout.write(text.encode('utf-8'))
             return
     for path in args:
+        print >>sys.stderr, path
         if path == '-':
             fp = sys.stdin
         elif path.endswith('.gz'):
