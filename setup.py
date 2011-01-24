@@ -15,7 +15,8 @@ setup(
     'pymwp',
     ],
     scripts=[
-    'tools/mw2txt.py',
+    'tools/mwdump2wiki.py',
+    'tools/mwwiki2txt.py',
     ],
     keywords=['mediawiki parser', 'text mining'],
     classifiers=[

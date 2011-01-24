@@ -69,19 +69,22 @@ class XMLTagToken(Token):
         Token.__init__(self, name)
         self.pos = pos
         return
-    
+
+    def get_attr(self, name, value=None):
+        return self._attrs.get(name, value)
+
 class XMLStartTagToken(XMLTagToken):
     
     def __init__(self, name=u'', pos=0):
         XMLTagToken.__init__(self, name=name, pos=pos)
-        self._attrs = []
+        self._attrs = {}
         self._key = self._value = None
         return
     
     def __repr__(self):
         return ('<%s %r%s>' %
                 (self.__class__.__name__, self.name,
-                 ''.join( ' %r=%r' % (k,v) for (k,v) in self._attrs )))
+                 ''.join( ' %r=%r' % (k,v) for (k,v) in self._attrs.iteritems() )))
     
     def add_char(self, c):
         if self._value is not None:
@@ -106,9 +109,9 @@ class XMLStartTagToken(XMLTagToken):
     def end_attr(self):
         assert self._key is not None
         if self._value is None:
-            self._attrs.append((self._key, self._key))
+            self._attrs[self._key] = self._key
         else:
-            self._attrs.append((self._key, self._value))
+            self._attrs[self._key] = self._value
         self._key = self._value = None
         return
 
@@ -143,7 +146,7 @@ class WikiTextTokenizer(object):
             return
 
     def __init__(self, codec='utf-8'):
-        self.codec = codec
+        self._codec = codec
         self._scan = self._scan_bol
         self._wiki = True
         self._token = None
@@ -163,7 +166,7 @@ class WikiTextTokenizer(object):
     def feed_file(self, fp):
         self._lineno = 0
         for line in fp:
-            line = line.decode(self.codec)
+            line = line.decode(self._codec)
             self.feed_text(line)
             self._lineno += 1
         return
@@ -474,7 +477,7 @@ class WikiTextTokenizer(object):
     def _scan_starttag_name(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c.isalnum():
-            self._token.add_char(c)
+            self._token.add_char(c.lower())
             return i+1
         else:
             self._scan = self._scan_starttag_mid
@@ -519,7 +522,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_starttag_mid
             return i
         else:
-            self._token.add_char(c)
+            self._token.add_char(c.lower())
             return i+1
     
     def _scan_starttag_attr_value(self, i, c):
@@ -581,7 +584,7 @@ class WikiTextTokenizer(object):
         elif c.isspace():
             return i+1
         else:
-            self._token.add_char(c)
+            self._token.add_char(c.lower())
             return i+1
 
     def _scan_comment(self, i, c):
