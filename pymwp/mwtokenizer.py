@@ -85,6 +85,9 @@ class XMLStartTagToken(XMLTagToken):
         return ('<%s %r%s>' %
                 (self.__class__.__name__, self.name,
                  ''.join( ' %r=%r' % (k,v) for (k,v) in self._attrs.iteritems() )))
+
+    def is_open(self):
+        return not self.name.endswith('/')
     
     def add_char(self, c):
         if self._value is not None:

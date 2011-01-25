@@ -13,8 +13,14 @@ from pymwp.mwxmldump import MWXMLDumpSplitter
 
 SPC = re.compile(r'\s+')
 def rmsp(s): return SPC.sub(' ', s)
-MEDIA_JP = re.compile(ur'^(file|image|media|ファイル|画像):', re.I)
-def ismedia(name): return MEDIA_JP.match(name)
+MEDIA = re.compile(u'''^(
+ file|
+ image|
+ media|
+ \u30d5\u30a1\u30a4\u30eb|
+ \u753b\u50cf
+ ):''', re.I | re.X)
+def ismedia(name): return MEDIA.match(name)
 
 
 ##  WikiTextExtractor
@@ -97,20 +103,22 @@ class WikiTextExtractor(WikiTextParser):
 ##
 class MWDump2Text(MWXMLDumpSplitter):
 
-    def __init__(self, output=sys.stdout, template=None,
+    def __init__(self, factory,
+                 output=sys.stdout, template=None,
                  titlepat=None, pageids=None,
                  revisionlimit=1, codec='utf-8'):
         MWXMLDumpSplitter.__init__(
             self, output=output, template=template,
             titlepat=titlepat, pageids=pageids,
             revisionlimit=revisionlimit, codec=codec)
+        self.factory = factory
         return
 
     def start_revision(self, pageid, title, revision):
         MWXMLDumpSplitter.start_revision(self, pageid, title, revision)
         fp = self.get_fp()
         if fp is not None:
-            self._textparser = WikiTextExtractor(outfp=fp, codec=self.codec)
+            self._textparser = self.factory(fp)
         return
     
     def handle_text(self, text):
@@ -130,22 +138,25 @@ class MWDump2Text(MWXMLDumpSplitter):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-c codec] [-t template] [-e titlepat] [-n npages] '
+        print ('usage: %s [-x] [-c codec] [-t template] [-e titlepat] [-n npages] '
                '[-p pageids] [-r revisionlimit] [file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'c:t:e:n:p:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'xc:t:e:n:p:r:')
     except getopt.GetoptError:
         return usage()
     codec = 'utf-8'
     template = None
     titlepat = None
     pageids = None
+    xmldump = False
     revisionlimit = 1
     for (k, v) in opts:
-        if k == '-c': codec = v 
+        if k == '-x': xmldump = True
+        elif k == '-c': codec = v 
         elif k == '-t': template = v
         elif k == '-e': titlepat = re.compile(v)
+        elif k == '-r': revisionlimit = int(v)
         elif k == '-n':
             pageids = set(xrange(int(v)))
         elif k == '-p':
@@ -153,28 +164,26 @@ def main(argv):
                 pageids = set()
             for x in v.split(','):
                 pageids.add(int(x))
-        elif k == '-r': revisionlimit = int(v)
+    factory = (lambda fp: WikiTextExtractor(outfp=fp, codec=codec))
     for path in (args or ['-']):
         if path == '-':
             fp = sys.stdin
-            parser = WikiTextExtractor(codec=codec)
         elif path.endswith('.gz'):
             from gzip import GzipFile
             fp = GzipFile(path)
-            parser = MWDump2Text(
-                codec=codec, template=template,
-                titlepat=titlepat, pageids=pageids,
-                revisionlimit=revisionlimit)
         elif path.endswith('.bz2'):
             from bz2 import BZ2File
             fp = BZ2File(path)
+        else:
+            fp = open(path)
+        if xmldump:
             parser = MWDump2Text(
+                factory,
                 codec=codec, template=template,
                 titlepat=titlepat, pageids=pageids,
                 revisionlimit=revisionlimit)
         else:
-            fp = open(path)
-            parser = WikiTextExtractor(codec=codec)
+            parser = factory(sys.stdout)
         parser.feed_file(fp)
         fp.close()
         parser.close()
