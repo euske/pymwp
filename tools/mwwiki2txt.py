@@ -4,10 +4,11 @@ import re
 import sys
 from pymwp.mwtokenizer import WikiToken
 from pymwp.mwparser import WikiTextParser
-from pymwp.mwparser import WikiTree, WikiXMLTree, WikiCommentTree
-from pymwp.mwparser import WikiSpecialTree, WikiKeywordTree, WikiLinkTree
-from pymwp.mwparser import WikiPreTree, WikiItemizeTree, WikiHeadlineTree
-from pymwp.mwparser import WikiTableCaptionTree, WikiTableHeaderTree, WikiTableDataTree
+from pymwp.mwparser import WikiTree, WikiXMLTree, WikiArgTree
+from pymwp.mwparser import WikiSpecialTree, WikiCommentTree
+from pymwp.mwparser import WikiKeywordTree, WikiLinkTree
+from pymwp.mwparser import WikiSpanTree, WikiDivTree
+from pymwp.mwparser import WikiTableTree, WikiTableCellTree
 from pymwp.mwxmldump import MWXMLDumpSplitter
 
 
@@ -62,7 +63,7 @@ class WikiTextExtractor(WikiTextParser):
         elif isinstance(tree, WikiCommentTree):
             pass
         elif isinstance(tree, WikiXMLTree):
-            if tree.name == 'ref':
+            if tree.xml.name == 'ref':
                 pass
             else:
                 for c in tree:
@@ -86,16 +87,21 @@ class WikiTextExtractor(WikiTextParser):
                     self.write(' ')
             elif tree:
                 self.dump(tree[0])
+        elif isinstance(tree, WikiTableCellTree):
+            if tree:
+                self.dump(tree[-1])
+                self.write('\n')
+        elif isinstance(tree, WikiTableTree):
+            for c in tree:
+                if not isinstance(c, WikiArgTree):
+                    self.dump(c)
+        elif isinstance(tree, WikiDivTree):
+            for c in tree:
+                self.dump(c)
+            self.write('\n')
         elif isinstance(tree, WikiTree):
             for c in tree:
                 self.dump(c)
-            if (isinstance(tree, WikiPreTree) or
-                isinstance(tree, WikiItemizeTree) or
-                isinstance(tree, WikiHeadlineTree) or
-                isinstance(tree, WikiTableCaptionTree) or
-                isinstance(tree, WikiTableHeaderTree) or
-                isinstance(tree, WikiTableDataTree)):
-                self.write('\n')
         return
 
 

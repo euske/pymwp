@@ -13,17 +13,12 @@ from mwtokenizer import WikiTextTokenizer
 ##
 class WikiTree(object):
 
-    NAME = None
-
-    def __init__(self, name=None):
-        self.name = name or self.NAME
+    def __init__(self):
         self._subtree = []
         return
 
     def __repr__(self):
-        return ('<%s %s>' %
-                (self.__class__.__name__,
-                 ' '.join(map(repr, self._subtree))))
+        return ('<%s>' % self.__class__.__name__)
 
     def __iter__(self):
         return iter(self._subtree)
@@ -64,37 +59,45 @@ class WikiTree(object):
     def finish(self):
         return
 
-class WikiSpanTree(WikiTree):
+class WikiPageTree(WikiTree): pass
+class WikiArgTree(WikiTree): pass
 
+class WikiSpanTree(WikiTree):
     def __init__(self, token):
-        WikiTree.__init__(self, token.name)
+        WikiTree.__init__(self)
         self.token = token
         return
-
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__.__name__, self.token)
+class WikiDivTree(WikiTree):
+    def __init__(self, token):
+        WikiTree.__init__(self)
+        self.token = token
+        return
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__.__name__, self.token)
 class WikiXMLTree(WikiTree):
-
     def __init__(self, xml):
-        WikiTree.__init__(self, xml.name)
+        WikiTree.__init__(self)
         self.xml = xml
         return
-
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__.__name__, self.xml)
     def get_attr(self, name, value=None):
         return self.xml.get_attr(name, value=value)
-
-class WikiPageTree(WikiTree): NAME = 'page'
-class WikiArgTree(WikiTree): NAME = 'arg'
-class WikiCommentTree(WikiTree): NAME = 'comment'
-class WikiSpecialTree(WikiTree): NAME = 'special'
-class WikiKeywordTree(WikiTree): NAME = 'keyword'
-class WikiLinkTree(WikiTree): NAME = 'link'
-class WikiTableTree(WikiTree): NAME = 'table'
-class WikiTableCaptionTree(WikiTree): NAME = 'caption'
-class WikiTableRowTree(WikiTree): NAME = 'tr'
-class WikiTableHeaderTree(WikiTree): NAME = 'th'
-class WikiTableDataTree(WikiTree): NAME = 'td'
-class WikiPreTree(WikiTree): NAME = 'pre'
-class WikiItemizeTree(WikiSpanTree): NAME = 'item'
-class WikiHeadlineTree(WikiSpanTree): NAME = 'headline'
+class WikiCommentTree(WikiSpanTree): pass
+class WikiSpecialTree(WikiSpanTree): pass
+class WikiKeywordTree(WikiSpanTree): pass
+class WikiLinkTree(WikiSpanTree): pass
+class WikiTableTree(WikiDivTree): pass
+class WikiTableCaptionTree(WikiTableTree): pass
+class WikiTableRowTree(WikiTableTree): pass
+class WikiTableCellTree(WikiTableTree): pass
+class WikiTableHeaderTree(WikiTableCellTree): pass
+class WikiTableDataTree(WikiTableCellTree): pass
+class WikiPreTree(WikiDivTree): pass
+class WikiItemizeTree(WikiDivTree): pass
+class WikiHeadlineTree(WikiDivTree): pass
 
 
 ##  WikiTextParser
@@ -104,8 +107,8 @@ class WikiTextParser(WikiTextTokenizer):
     def __init__(self):
         WikiTextTokenizer.__init__(self)
         self._root = WikiPageTree()
-        self._stack = [(self._root, self._parse_top, None)]
-        (self._tree, self._parse, self._token) = self._stack.pop()
+        self._stack = [(self._root, self._parse_top)]
+        (self._tree, self._parse) = self._stack.pop()
         return
 
     def get_root(self):
@@ -134,39 +137,20 @@ class WikiTextParser(WikiTextTokenizer):
 
     def _push_context(self, tree, parse, token=None):
         self._tree.append(tree)
-        self._stack.append((self._tree, self._parse, self._token))
+        self._stack.append((self._tree, self._parse))
         self._tree = tree
         self._parse = parse
-        self._token = token
         return
 
     def _pop_context(self):
         assert self._stack
         self._tree.finish()
-        (self._tree, self._parse, self._token) = self._stack.pop()
+        (self._tree, self._parse) = self._stack.pop()
         return
 
     def _parse_top(self, i, (pos,t)):
         if isinstance(t, XMLStartTagToken) and t.is_open():
-            self._push_context(WikiXMLTree(t), self._parse_xml_top)
-            return i+1
-        elif t is WikiToken.TABLE_OPEN:
-            self._push_context(WikiTableTree(), self._parse_table)
-            return i+1
-        else:
-            return self._parse_par(i, (pos,t))
-
-    def _parse_xml_top(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiXMLTree), self._tree
-        if isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i+1
-        else:
-            return self._parse_top(i, (pos,t))
-
-    def _parse_par(self, i, (pos,t)):
-        if isinstance(t, XMLStartTagToken) and t.is_open():
-            self._push_context(WikiXMLTree(t), self._parse_xml_par)
+            self._push_context(WikiXMLTree(t), self._parse_xml)
             return i+1
         elif isinstance(t, WikiItemizeToken):
             self._push_context(WikiItemizeTree(t), self._parse_itemize)
@@ -175,34 +159,22 @@ class WikiTextParser(WikiTextTokenizer):
             self._push_context(WikiHeadlineTree(t), self._parse_headline)
             return i+1
         elif t is WikiToken.PRE:
-            self._push_context(WikiPreTree(), self._parse_pre)
+            self._push_context(WikiPreTree(t), self._parse_pre)
             return i+1
-        else:
-            return self._parse_core(i, (pos,t))        
-        
-    def _parse_xml_par(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiXMLTree), self._tree
-        if isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i+1
-        else:
-            return self._parse_par(i, (pos,t))
-
-    def _parse_core(self, i, (pos,t)):
-        if isinstance(t, XMLStartTagToken) and t.is_open():
-            self._push_context(WikiXMLTree(t), self._parse_xml_core)
+        elif t is WikiToken.TABLE_OPEN:
+            self._push_context(WikiTableTree(t), self._parse_table)
             return i+1
         elif t is WikiToken.COMMENT_OPEN:
-            self._push_context(WikiCommentTree(), self._parse_comment)
+            self._push_context(WikiCommentTree(t), self._parse_comment)
             return i+1
         elif t is WikiToken.SPECIAL_OPEN:
-            self._push_context(WikiSpecialTree(), self._parse_special)
+            self._push_context(WikiSpecialTree(t), self._parse_special)
             return i+1
         elif t is WikiToken.KEYWORD_OPEN:
-            self._push_context(WikiKeywordTree(), self._parse_keyword)
+            self._push_context(WikiKeywordTree(t), self._parse_keyword)
             return i+1
         elif t is WikiToken.LINK_OPEN:
-            self._push_context(WikiLinkTree(), self._parse_link)
+            self._push_context(WikiLinkTree(t), self._parse_link)
             return i+1
         elif t in (
             WikiToken.QUOTE2,
@@ -229,13 +201,13 @@ class WikiTextParser(WikiTextTokenizer):
             self.invalid_token(pos, t)
             return i+1
 
-    def _parse_xml_core(self, i, (pos,t)):
+    def _parse_xml(self, i, (pos,t)):
         assert isinstance(self._tree, WikiXMLTree), self._tree
         if isinstance(t, XMLEndTagToken):
             self._pop_context()
             return i+1
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
 
     def _parse_comment(self, i, (pos,t)):
         assert isinstance(self._tree, WikiCommentTree), self._tree
@@ -246,77 +218,91 @@ class WikiTextParser(WikiTextTokenizer):
             self._tree.append(t)
             return i+1
         
-    def _parse_keyword(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiKeywordTree), self._tree
-        if t is WikiToken.KEYWORD_CLOSE:
-            self._pop_context()
-            return i+1
-        else:
-            self._push_context(WikiArgTree(), self._parse_keyword_arg)
-            return i
-        
-    def _parse_keyword_arg(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiArgTree), self._tree
-        if t in (
-            WikiToken.BAR,
-            WikiToken.BARTOP):
-            self._pop_context()
-            return i+1
-        elif t is WikiToken.KEYWORD_CLOSE:
-            self._pop_context()
-            return i
-        else:
-            return self._parse_core(i, (pos,t))
-    
-    def _parse_link(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiLinkTree), self._tree
-        if t is WikiToken.LINK_CLOSE:
-            self._pop_context()
-            return i+1
-        else:
-            self._push_context(WikiArgTree(), self._parse_link_arg)
-            return i
-    
-    def _parse_link_arg(self, i, (pos,t)):
-        assert isinstance(self._tree, WikiArgTree), self._tree
-        if t is WikiToken.BLANK:
-            self._pop_context()
-            return i+1
-        elif t is WikiToken.LINK_CLOSE:
-            self._pop_context()
-            return i
-        else:
-            return self._parse_core(i, (pos,t))
-    
     def _parse_special(self, i, (pos,t)):
         assert isinstance(self._tree, WikiSpecialTree), self._tree
         if t is WikiToken.SPECIAL_CLOSE:
             self._pop_context()
             return i+1
+        elif t in (
+            WikiToken.KEYWORD_CLOSE,
+            WikiToken.LINK_CLOSE):
+            self._pop_context()
+            return i
         else:
-            self._push_context(WikiArgTree(), self._parse_special_arg)
+            self._push_context(WikiArgTree(), self._parse_arg_barsep)
             return i
 
-    def _parse_special_arg(self, i, (pos,t)):
+    def _parse_keyword(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiKeywordTree), self._tree
+        if t is WikiToken.KEYWORD_CLOSE:
+            self._pop_context()
+            return i+1
+        elif t in (
+            WikiToken.SPECIAL_CLOSE,
+            WikiToken.LINK_CLOSE):
+            self._pop_context()
+            return i
+        else:
+            self._push_context(WikiArgTree(), self._parse_arg_barsep)
+            return i
+        
+    def _parse_link(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiLinkTree), self._tree
+        if t is WikiToken.LINK_CLOSE:
+            self._pop_context()
+            return i+1
+        elif t in (
+            WikiToken.SPECIAL_CLOSE,
+            WikiToken.KEYWORD_CLOSE):
+            self._pop_context()
+            return i
+        else:
+            self._push_context(WikiArgTree(), self._parse_arg_spcsep)
+            return i
+    
+    def _parse_arg_barsep(self, i, (pos,t)):
         assert isinstance(self._tree, WikiArgTree), self._tree
         if t in (
             WikiToken.BAR,
             WikiToken.BARTOP):
             self._pop_context()
             return i+1
-        elif t is WikiToken.SPECIAL_CLOSE:
+        elif t in (
+            WikiToken.SPECIAL_CLOSE,
+            WikiToken.KEYWORD_CLOSE,
+            WikiToken.LINK_CLOSE):
             self._pop_context()
             return i
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
+    
+    def _parse_arg_spcsep(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiArgTree), self._tree
+        if t is WikiToken.BLANK:
+            self._pop_context()
+            return i+1
+        elif t in (
+            WikiToken.SPECIAL_CLOSE,
+            WikiToken.KEYWORD_CLOSE,
+            WikiToken.LINK_CLOSE):
+            self._pop_context()
+            return i
+        else:
+            return self._parse_top(i, (pos,t))
     
     def _parse_span(self, i, (pos,t)):
         assert isinstance(self._tree, WikiSpanTree), self._tree
-        if t is self._token:
+        if t is self._tree.token:
             self._pop_context()
             return i+1
+        elif t in (
+            WikiToken.SPECIAL_CLOSE,
+            WikiToken.KEYWORD_CLOSE,
+            WikiToken.LINK_CLOSE):
+            self._pop_context()
+            return i
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
         
     def _parse_pre(self, i, (pos,t)):
         assert isinstance(self._tree, WikiPreTree), self._tree
@@ -335,7 +321,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return i
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
         
     def _parse_itemize(self, i, (pos,t)):
         assert isinstance(self._tree, WikiItemizeTree), self._tree
@@ -354,7 +340,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return i
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
         
     def _parse_headline(self, i, (pos,t)):
         assert isinstance(self._tree, WikiHeadlineTree), self._tree
@@ -375,7 +361,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return i
         else:
-            return self._parse_core(i, (pos,t))
+            return self._parse_top(i, (pos,t))
         
     def _parse_table(self, i, (pos,t)):
         assert isinstance(self._tree, WikiTableTree), self._tree
@@ -383,16 +369,16 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return i+1
         elif t is WikiToken.TABLE_CAPTION:
-            self._push_context(WikiTableCaptionTree(), self._parse_table_caption)
+            self._push_context(WikiTableCaptionTree(t), self._parse_table_caption)
             return i+1
         elif t is WikiToken.TABLE_ROW:
-            self._push_context(WikiTableRowTree(), self._parse_table_row)
+            self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return i+1
         elif t in (
             WikiToken.TABLE_ROW,
             WikiToken.BARTOP,
             WikiToken.EXCTOP): 
-            self._push_context(WikiTableRowTree(), self._parse_table_row)
+            self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return i
         else:
             self._push_context(WikiArgTree(), self._parse_table_arg)
@@ -416,7 +402,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return i
         else:
-            return self._parse_par(i, (pos,t))
+            return self._parse_top(i, (pos,t))
         
     def _parse_table_caption(self, i, (pos,t)):
         assert isinstance(self._tree, WikiTableCaptionTree), self._tree
@@ -442,12 +428,12 @@ class WikiTextParser(WikiTextTokenizer):
         elif t in (
             WikiToken.EXCTOP,
             WikiToken.TABLE_HEADER_SEP):
-            self._push_context(WikiTableHeaderTree(), self._parse_table_header)
+            self._push_context(WikiTableHeaderTree(t), self._parse_table_header)
             return i+1
         elif t in (
             WikiToken.BARTOP,
             WikiToken.TABLE_DATA_SEP):
-            self._push_context(WikiTableDataTree(), self._parse_table_data)
+            self._push_context(WikiTableDataTree(t), self._parse_table_data)
             return i+1
         else:
             self._push_context(WikiArgTree(), self._parse_table_arg)
@@ -510,14 +496,14 @@ def main(argv):
         parser.close()
         def f(x, i=0):
             if isinstance(x, WikiTree):
-                print ' '*i+'('+x.name
+                print ' '*i+'('+repr(x)
                 for c in x:
                     f(c, i+1)
                 print ' '*i+')'
             elif isinstance(x, WikiToken):
-                print ' '*i+x.name
+                print ' '*i+repr(x)
             elif isinstance(x, XMLTagToken):
-                print ' '*i+x.name
+                print ' '*i+repr(x)
             elif isinstance(x, basestring):
                 print ' '*i+repr(x)
             else:
