@@ -726,30 +726,6 @@ class WikiTextTokenizer(object):
             return i
 
 
-##  WikiTextTokenizerTester
-##
-class WikiTextTokenizerTester(WikiTextTokenizer):
-    
-    def __init__(self):
-        WikiTextTokenizer.__init__(self)
-        self._tokens = []
-        return
-    
-    def handle_token(self, token):
-        WikiTextTokenizer.handle_token(self, token)
-        self._tokens.append(token)
-        return
-    
-    def handle_text(self, text):
-        self._tokens.append(text)
-        return
-    
-    def run(self, text):
-        self.feed_text(text)
-        self.close()
-        return self._tokens
-
-
 # main
 def main(argv):
     args = argv[1:] or ['-']

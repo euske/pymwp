@@ -104,9 +104,8 @@ class WikiTextParser(WikiTextTokenizer):
     def __init__(self):
         WikiTextTokenizer.__init__(self)
         self._root = WikiPageTree()
-        self._stack = [(self._parse_top, self._root)]
-        self._tokpos = None
-        (self._parse, self._tree) = self._stack.pop()
+        self._stack = [(self._root, self._parse_top, None)]
+        (self._tree, self._parse, self._token) = self._stack.pop()
         return
 
     def get_root(self):
@@ -133,17 +132,18 @@ class WikiTextParser(WikiTextTokenizer):
         print >>sys.stderr, (self._parse, pos, token)
         return
 
-    def _push_context(self, tree, parse):
+    def _push_context(self, tree, parse, token=None):
         self._tree.append(tree)
-        self._stack.append((self._parse, self._tree))
+        self._stack.append((self._tree, self._parse, self._token))
         self._tree = tree
         self._parse = parse
+        self._token = token
         return
 
     def _pop_context(self):
         assert self._stack
         self._tree.finish()
-        (self._parse, self._tree) = self._stack.pop()
+        (self._tree, self._parse, self._token) = self._stack.pop()
         return
 
     def _parse_top(self, i, (pos,t)):
@@ -208,7 +208,7 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.QUOTE2,
             WikiToken.QUOTE3,
             WikiToken.QUOTE5):
-            self._push_context(WikiSpanTree(t), self._parse_span)
+            self._push_context(WikiSpanTree(t), self._parse_span, t)
             return i+1
         elif t in (
             WikiToken.HR,
@@ -312,7 +312,7 @@ class WikiTextParser(WikiTextTokenizer):
     
     def _parse_span(self, i, (pos,t)):
         assert isinstance(self._tree, WikiSpanTree), self._tree
-        if t is self._tree.token:
+        if t is self._token:
             self._pop_context()
             return i+1
         else:
@@ -484,17 +484,6 @@ class WikiTextParser(WikiTextTokenizer):
         else:
             self._push_context(WikiArgTree(), self._parse_table_arg)
             return i
-
-
-##  WikiTextParserTester
-##
-class WikiTextParserTester(WikiTextParser):
-    
-    def run(self, text):
-        self.feed_text(text)
-        self.close()
-        print self.get_root()
-        return f(self.get_root())
 
 
 # main
