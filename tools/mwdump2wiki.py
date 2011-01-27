@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 #
 # usage:
-#  ./tools/mwdump2wiki.py -n10 -t 'article%(pageid)05d.txt' dev/jawiki.xml.bz2
+#  $ mwdump2wiki.py -n10 -t 'article%(pageid)05d.txt' jawiki.xml.bz2
 #
 import re
 import sys

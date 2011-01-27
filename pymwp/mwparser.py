@@ -376,8 +376,10 @@ class WikiTextParser(WikiTextTokenizer):
             return i+1
         elif t in (
             WikiToken.TABLE_ROW,
+            WikiToken.EXCTOP,
             WikiToken.BARTOP,
-            WikiToken.EXCTOP): 
+            WikiToken.TABLE_HEADER_SEP,
+            WikiToken.TABLE_DATA_SEP):
             self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return i
         else:
@@ -386,9 +388,7 @@ class WikiTextParser(WikiTextTokenizer):
 
     def _parse_table_arg(self, i, (pos,t)):
         assert isinstance(self._tree, WikiArgTree), self._tree
-        if t in (
-            WikiToken.BAR,
-            WikiToken.BARTOP):
+        if t is WikiToken.BAR:
             self._pop_context()
             return i+1
         elif t in (
@@ -396,8 +396,8 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.TABLE_ROW,
             WikiToken.TABLE_CAPTION,
             WikiToken.EXCTOP,
-            WikiToken.TABLE_HEADER_SEP,
             WikiToken.BARTOP,
+            WikiToken.TABLE_HEADER_SEP,
             WikiToken.TABLE_DATA_SEP):
             self._pop_context()
             return i
@@ -409,8 +409,11 @@ class WikiTextParser(WikiTextTokenizer):
         if t in (
             WikiToken.TABLE_CLOSE,
             WikiToken.TABLE_ROW,
+            WikiToken.TABLE_CAPTION,
+            WikiToken.EXCTOP,
             WikiToken.BARTOP,
-            WikiToken.EXCTOP):
+            WikiToken.TABLE_HEADER_SEP,
+            WikiToken.TABLE_DATA_SEP):
             self._pop_context()
             return i
         else:
@@ -446,8 +449,8 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.TABLE_ROW,
             WikiToken.TABLE_CAPTION,
             WikiToken.EXCTOP,
-            WikiToken.TABLE_HEADER_SEP,
             WikiToken.BARTOP,
+            WikiToken.TABLE_HEADER_SEP,
             WikiToken.TABLE_DATA_SEP):
             self._pop_context()            
             return i
@@ -462,8 +465,8 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.TABLE_ROW,
             WikiToken.TABLE_CAPTION,
             WikiToken.EXCTOP,
-            WikiToken.TABLE_HEADER_SEP,
             WikiToken.BARTOP,
+            WikiToken.TABLE_HEADER_SEP,
             WikiToken.TABLE_DATA_SEP):
             self._pop_context()            
             return i

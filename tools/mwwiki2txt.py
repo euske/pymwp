@@ -1,5 +1,8 @@
 #!/usr/bin/env python2
-# -*- coding: euc-jp -*-
+#
+# usage:
+#  $ mwwiki2txt.py -n10 -t 'article%(pageid)05d.txt' jawiki.xml.bz2
+#
 import re
 import sys
 from pymwp.mwtokenizer import WikiToken
@@ -14,14 +17,9 @@ from pymwp.mwxmldump import MWXMLDumpSplitter
 
 SPC = re.compile(r'\s+')
 def rmsp(s): return SPC.sub(' ', s)
-MEDIA = re.compile(u'''^(
- file|
- image|
- media|
- \u30d5\u30a1\u30a4\u30eb|
- \u753b\u50cf
- ):''', re.I | re.X)
-def ismedia(name): return MEDIA.match(name)
+
+IGNORED = re.compile(u'^([-a-z]+|Category|Special):')
+def isignored(name): return IGNORED.match(name)
 
 
 ##  WikiTextExtractor
@@ -69,17 +67,13 @@ class WikiTextExtractor(WikiTextParser):
                 for c in tree:
                     self.dump(c)
         elif isinstance(tree, WikiKeywordTree):
-            if 2 <= len(tree):
-                name = tree[0]
-                if isinstance(name, WikiTree):
-                    name = name.get_text()
-                if ismedia(name):
-                    self.dump(tree[-1])
+            if tree:
+                if isinstance(tree[0], WikiTree):
+                    name = tree[0].get_text()
                 else:
-                    for c in tree[1:]:
-                        self.dump(c)
-            elif tree:
-                self.dump(tree[0])
+                    name = tree[0]
+                if isinstance(name, unicode) and not isignored(name):
+                    self.dump(tree[-1])
         elif isinstance(tree, WikiLinkTree):
             if 2 <= len(tree):
                 for c in tree[1:]:
@@ -112,19 +106,24 @@ class MWDump2Text(MWXMLDumpSplitter):
     def __init__(self, factory,
                  output=sys.stdout, template=None,
                  titlepat=None, pageids=None,
-                 revisionlimit=1, codec='utf-8'):
+                 revisionlimit=1, codec='utf-8',
+                 titleline=True):
         MWXMLDumpSplitter.__init__(
             self, output=output, template=template,
             titlepat=titlepat, pageids=pageids,
             revisionlimit=revisionlimit, codec=codec)
         self.factory = factory
+        self.titleline = titleline
         return
 
     def start_revision(self, pageid, title, revision):
+        print >>sys.stderr, pageid
         MWXMLDumpSplitter.start_revision(self, pageid, title, revision)
+        if self.titleline:
+            self.write(title+'\n')
         fp = self.get_fp()
         if fp is not None:
-            self._textparser = self.factory(fp)
+            self._textparser = self.factory(fp, self.codec)
         return
     
     def handle_text(self, text):
@@ -136,6 +135,7 @@ class MWDump2Text(MWXMLDumpSplitter):
         if self._textparser is not None:
             self._textparser.close()
             self._textparser = None
+        self.write('\f\n')
         MWXMLDumpSplitter.end_revision(self)
         return
 
@@ -145,10 +145,10 @@ def main(argv):
     import getopt
     def usage():
         print ('usage: %s [-x] [-c codec] [-t template] [-e titlepat] [-n npages] '
-               '[-p pageids] [-r revisionlimit] [file ...]') % argv[0]
+               '[-p pageids] [-r revisionlimit] [-T] [file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'xc:t:e:n:p:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'xc:t:e:n:p:r:T')
     except getopt.GetoptError:
         return usage()
     codec = 'utf-8'
@@ -157,6 +157,7 @@ def main(argv):
     pageids = None
     xmldump = False
     revisionlimit = 1
+    titleline = False
     for (k, v) in opts:
         if k == '-x': xmldump = True
         elif k == '-c': codec = v 
@@ -170,7 +171,9 @@ def main(argv):
                 pageids = set()
             for x in v.split(','):
                 pageids.add(int(x))
-    factory = (lambda fp: WikiTextExtractor(outfp=fp, codec=codec))
+        elif k == '-T':
+            titleline = True
+    factory = (lambda fp,codec: WikiTextExtractor(outfp=fp, codec=codec))
     for path in (args or ['-']):
         if path == '-':
             fp = sys.stdin
@@ -187,9 +190,10 @@ def main(argv):
                 factory,
                 codec=codec, template=template,
                 titlepat=titlepat, pageids=pageids,
-                revisionlimit=revisionlimit)
+                revisionlimit=revisionlimit,
+                titleline=titleline)
         else:
-            parser = factory(sys.stdout)
+            parser = factory(sys.stdout, codec)
         parser.feed_file(fp)
         fp.close()
         parser.close()
