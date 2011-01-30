@@ -23,23 +23,24 @@ class Token(object):
 ##  WikiToken
 ##
 class WikiToken(Token): pass
+class WikiBOLToken(WikiToken): pass
 
 WikiToken.EOL = WikiToken('\n')
 WikiToken.BLANK = WikiToken(' ')
 WikiToken.BAR = WikiToken('|')
-WikiToken.BARTOP = WikiToken('|')
-WikiToken.EXCTOP = WikiToken('!')
+WikiToken.SPECIAL_OPEN = WikiToken('{{')
+WikiToken.SPECIAL_CLOSE = WikiToken('}}')
 WikiToken.KEYWORD_OPEN = WikiToken('[[')
 WikiToken.KEYWORD_CLOSE = WikiToken(']]')
 WikiToken.LINK_OPEN = WikiToken('[')
 WikiToken.LINK_CLOSE = WikiToken(']')
-WikiToken.SPECIAL_OPEN = WikiToken('{{')
-WikiToken.SPECIAL_CLOSE = WikiToken('}}')
 WikiToken.TABLE_OPEN = WikiToken('{|')
 WikiToken.TABLE_CLOSE = WikiToken('|}')
 WikiToken.TABLE_ROW = WikiToken('|-')
 WikiToken.TABLE_CAPTION = WikiToken('|+')
+WikiToken.TABLE_HEADER = WikiBOLToken('!')
 WikiToken.TABLE_HEADER_SEP = WikiToken('!!')
+WikiToken.TABLE_DATA = WikiBOLToken('|')
 WikiToken.TABLE_DATA_SEP = WikiToken('||')
 WikiToken.HR = WikiToken('HR')
 WikiToken.PAR = WikiToken('PAR')
@@ -49,7 +50,7 @@ WikiToken.QUOTE3 = WikiToken('QUOTE3')
 WikiToken.QUOTE5 = WikiToken('QUOTE5')
 WikiToken.COMMENT_OPEN = WikiToken('COMMENT_OPEN')
 WikiToken.COMMENT_CLOSE = WikiToken('COMMENT_CLOSE')
-    
+
 class WikiVarToken(WikiToken):
 
     def __init__(self, name=u'', pos=0):
@@ -226,7 +227,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_bol_bar
             return i+1
         elif c == '!':
-            self._handle_token(i, WikiToken.EXCTOP)
+            self._handle_token(i, WikiToken.TABLE_HEADER)
             self._scan = self._scan_main
             return i+1
         elif c == '=':
@@ -294,7 +295,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1            
         else:
-            self._handle_token(i-1, WikiToken.BARTOP)
+            self._handle_token(i-1, WikiToken.TABLE_DATA)
             self._scan = self._scan_main
             return i
     

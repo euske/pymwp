@@ -15,6 +15,9 @@ class MWXMLDumpParser(object):
         self._titleok = self._textok = False
         self._pageid = 0
         return
+
+    def close(self):
+        return
     
     def feed_file(self, fp):
         self._expat.ParseFile(fp)
@@ -66,55 +69,41 @@ class MWXMLDumpParser(object):
         return
 
 
-##  MWXMLDumpSplitter
+##  MWXMLDumpFilter
 ##
-class MWXMLDumpSplitter(MWXMLDumpParser):
+class MWXMLDumpFilter(MWXMLDumpParser):
 
-    def __init__(self, output=sys.stdout, codec='utf-8',
-                 template=None, titlepat=None,
-                 pageids=None, revisionlimit=1):
+    def __init__(self, titlepat=None, revisionlimit=1):
         MWXMLDumpParser.__init__(self)
-        self.codec = codec
-        self.output = output
-        self.template = template
         self.titlepat = titlepat
-        self.pageids = pageids
         self.revisionlimit = revisionlimit
         self._fp = None
         return
 
-    def get_fp(self):
-        return self._fp
-
-    def write(self, text):
-        if self._fp is not None:
-            self._fp.write(text.encode(self.codec, 'ignore'))
-        return
-
     def start_revision(self, pageid, title, revision):
-        if self.pageids is not None:
-            if pageid not in self.pageids: return
+        if self.revisionlimit <= revision: return
         if self.titlepat is not None:
             if not self.titlepat.search(title): return
-        if self.revisionlimit <= revision: return
-        if self.template is not None:
-            name = title.encode('utf-8').encode('quopri_codec')
-            path = (self.template % {'name':name, 'pageid':pageid, 'revision':revision})
-            self._fp = open(path, 'w')
-        elif self.output is not None:
-            self._fp = self.output
+        self._fp = self.open_file(pageid, title, revision)
         return
     
     def end_revision(self):
         if self._fp is not None:
-            if self.template is not None:
-                self._fp.close()
+            self.close_file(self._fp)
             self._fp = None
         return
     
     def handle_text(self, text):
-        self.write(text)
+        if self._fp is not None:
+            self.write_file(self._fp, text)
         return
+
+    def open_file(self, pageid, title, revision):
+        raise NotImplementedError
+    def close_file(self, fp):
+        raise NotImplementedError
+    def write_file(self, fp, text):
+        raise NotImplementedError
 
 
 # main
