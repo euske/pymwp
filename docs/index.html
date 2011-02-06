@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>PyMWP</title>
+</head>
+<body>
+
+<div align=right class=lastmod>
+<!-- hhmts start -->
+Last Modified: Sun Feb  6 14:52:21 UTC 2011
+<!-- hhmts end -->
+</div>
+
+<h1>PyMWP</h1>
+<p>
+Python MediaWiki Parser
+
+<p>
+<a href="http://www.unixuser.org/~euske/python/pymwp/index.html">Homepage</a>
+&nbsp;
+<a href="#changes">Recent Changes</a>
+
+<ul>
+<li> <a href="#intro">What's It?</a>
+<li> <a href="#download">Download</a>
+<li> <a href="#install">How to Install</a> 
+<li> <a href="#use">How to Use</a>
+  <ul>
+    <li> <a href="#mwxml2wiki.py">mwxml2wiki.py</a>
+    <li> <a href="#mwwiki2txt.py">mwwiki2txt.py</a>
+  </ul>
+<li> <a href="#changes">Changes</a>
+<li> <a href="#todo">TODO</a>
+<li> <a href="#related">Related Projects</a>
+<li> <a href="#license">Terms and Conditions</a>
+</ul>
+
+<h2><a name="intro">What's It?</a></h2>
+<p>
+PyMWP is a simple and robust parser for MediaWiki contents.
+It is suitable for analyzing or extracting information
+from Wikipedia articles.
+
+<h3><a name="download">Download</a></h3>
+<p>
+<strong>Source distribution:</strong><br>
+<a href="http://pypi.python.org/pypi/pymwp/">
+http://pypi.python.org/pypi/pymwp/
+</a>
+
+<P>
+<strong>github:</strong><br>
+<a href="https://github.com/euske/pymwp/">
+https://github.com/euske/pymwp/
+</a>
+
+<h2><a name="install">How to Install</a></h2>
+<ol>
+<li> Install <a href="http://www.python.org/download/">Python</a> 2.4 or newer.
+     (<font color=red><strong>Python 3 is not supported.</strong></font>)
+<li> Download the <a href="#source">source code</a>.
+<li> Unpack it.
+<li> Run <code>setup.py</code> to install:<br>
+<blockquote><pre>
+# <strong>python setup.py install</strong>
+</pre></blockquote>
+<li> Done!
+</ol>
+
+<h2><a name="use">How to Use</a></h2>
+<p>
+
+<h3><a name="mwxml2wiki.py">mwxml2wiki.py</a></h3>
+<p>
+Converts MediaWiki XML dump files into separate text files.
+
+<h4>Examples</h4>
+<blockquote><pre>
+$ <strong>mwxml2wiki.py -o big.txt enwiki-20100910-pages-articles.xml.bz2</strong>
+
+$ <strong>mwxml2wiki.py -z -t 'articles-%(pageid)08d.txt' enwiki-20100910-pages-articles.xml.bz2</strong>
+
+$ <strong>mwxml2wiki.py -C jawiki.gz.cdb jawiki-20100910-pages-articles.xml.bz2</strong>
+</pre></blockquote>
+
+<h4>Options</h4>
+<dl>
+<dt> <code>-o <em>filename</em></code> 
+<dd> Specifies the output file name.
+</dl>
+
+<hr noshade>
+
+<h3><a name="mwwiki2txt.py">mwwiki2txt.py</a></h3>
+
+<h4>Examples</h4>
+<blockquote><pre>
+$ <strong>mwwiki2txt.py article1.wiki &gt; articke1.txt</strong>
+
+$ <strong>mwwiki2txt.py -L article1.wiki</strong>
+
+$ <strong>mwwiki2txt.py -o jatext.gz.cdb -C jawiki.gz.cdb</strong>
+</pre></blockquote>
+
+<h4>Options</h4>
+<dl>
+</dl>
+
+<h2><a name="changes">Changes</a></h2>
+<ul>
+<li> 2011/02/xx: Release.
+</ul>
+
+<h2><a name="todo">TODO</a></h2>
+<ul>
+<li> <A href="http://www.python.org/dev/peps/pep-0008/">PEP-8</a> and
+<a href="http://www.python.org/dev/peps/pep-0257/">PEP-257</a> conformance.
+<li> Better documentation.
+<li> Robust error handling.
+</ul>
+
+<h2><a name="related">Related Projects</a></h2>
+<ul>
+<li> <a href="http://code.pediapress.com/wiki/wiki/mwlib">mwlib</a>
+ (Python library for parsing  MediaWiki articles)
+<li> <a href="http://barnesc.blogspot.com/2005/10/mw2html-export-mediawiki-to-static.html">mw2html</a>
+ (Export Mediawiki to static, traditional website)
+<li> <a href="https://github.com/dcramer/py-wikimarkup/">py-wikimarkup</a>
+ (A MediaWiki-to-HTML parser for Python)
+<li> <a href="http://pypi.python.org/pypi/mwparser/">mwparser</a>
+ (A simple renderer for the wiki markup used by MediaWiki)
+<li> <a href="http://sourceforge.net/apps/mediawiki/mwclient/">mwclient</a>
+ (MediaWiki API client)
+<li> <a href="https://github.com/ianweller/python-simplemediawiki">simplemediawiki</a>
+ (Extremely low-level wrapper to the MediaWiki API)
+<li> <a href="http://code.google.com/p/python-wikitools/">python-wikitools</a>
+ (Python package to interact with the MediaWiki API)
+</ul>
+
+<h2><a name="license">Terms and Conditions</a></h2>
+<p>
+(This is so-called MIT/X License)
+<p>
+<small>
+Copyright (c) 2011  Yusuke Shinyama &lt;yusuke at cs dot nyu dot edu&gt;
+<p>
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+<p>
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+</small>
+
+<hr noshade>
+<address>Yusuke Shinyama (yusuke at cs dot nyu dot edu)</address>
+</body>

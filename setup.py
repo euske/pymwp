@@ -5,8 +5,11 @@ from pymwp import __version__
 setup(
     name='pymwp',
     version=__version__,
-    description='MediaWiki parser',
-    long_description='''MediaWiki parser''',
+    description='Python MediaWiki parser',
+    long_description=
+    '''PyMWP is a simple and robust parser for MediaWiki contents.
+It is suitable for analyzing or extracting information
+from Wikipedia articles.''',
     license='MIT/X',
     author='Yusuke Shinyama',
     author_email='yusuke at cs dot nyu dot edu',
@@ -15,6 +18,7 @@ setup(
     'pymwp',
     ],
     scripts=[
+    'tools/mwdumpcdb.py',
     'tools/mwdump2wiki.py',
     'tools/mwwiki2txt.py',
     ],

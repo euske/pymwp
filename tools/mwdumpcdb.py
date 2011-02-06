@@ -29,7 +29,10 @@ class MWCDB2Dumper(object):
         return
 
     def get(self, pageid, revision=0):
-        title = self.reader['%d:title' % pageid].decode('utf-8')
+        try:
+            title = self.reader['%d:title' % pageid].decode('utf-8')
+        except KeyError:
+            title = None
         key = '%d/%d' % (pageid, revision)
         buf = StringIO(self.reader[key])
         fp = GzipFile(mode='r', fileobj=buf)
@@ -52,28 +55,30 @@ def main(argv):
         else:
             return open(path, mode=mode+'b')
     def usage():
-        print ('usage: %s [-c codec] [-o output] [cdbfile] [key ...]') % argv[0]
+        print ('usage: %s [-c codec] [-o output] [-T] [cdbfile] [key ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'o:c:')
+        (opts, args) = getopt.getopt(argv[1:], 'o:c:T')
     except getopt.GetoptError:
         return usage()
     output = None
     codec = 'utf-8'
+    titleline = False
     for (k, v) in opts:
         if k == '-o': output = v
         elif k == '-c': codec = v
+        elif k == '-T': titleline = True
     if not args: return usage()
     outfp = getfp(output or '-', 'w')
     reader = MWCDB2Dumper(args.pop(0))
     def dump(fp, title, text):
-        fp.write(title.encode(codec, 'ignore')+'\n')
+        if titleline:
+            fp.write(title.encode(codec, 'ignore')+'\n')
         fp.write(text.encode(codec, 'ignore'))
-        fp.write('\f\n')
         return
     if args:
         for pageid in args:
-            (title, text) = reader.get(pageid)
+            (title, text) = reader.get(int(pageid))
             dump(outfp, title, text)
     else:
         for (title,text) in reader:

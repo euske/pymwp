@@ -65,11 +65,13 @@ WikiToken.PRE = WikiToken('PRE')
 ##
 class XMLTagToken(Token):
 
+    NO_WIKI = ('nowiki', 'source',)
+    NO_TEXT = ('ref', 'gallery',)
     BR_TAG = ('br',)
     PAR_TAG = (
         'p','li','td','th','dt','dd',
         'h1','h2','h3','h4','h5','h6',
-        'div','pre','blockquote','address',
+        'div','pre','blockquote','address','center',
         )
     TABLE_TAG = ('table',)
     TABLE_ROW_TAG = ('tr',)
@@ -200,11 +202,11 @@ class WikiTextTokenizer(object):
         if self._text is not None:
             self.handle_text(self._textpos, self._text)
             self._textpos = self._text = None
-        if (isinstance(token, XMLTagToken) and
-            token.name == 'nowiki'):
+        if (isinstance(token, XMLStartTagToken) and
+            token.name in XMLTagToken.NO_WIKI):
             self._wiki = False
-        elif (isinstance(token, XMLTagToken) and
-              token.name == '/nowiki'):
+        elif (isinstance(token, XMLEndTagToken) and 
+              token.name in XMLTagToken.NO_WIKI):
             self._wiki = True
         self.handle_token(pos, token)
         return
@@ -479,7 +481,7 @@ class WikiTextTokenizer(object):
         elif c == '/':
             self._token = XMLEndTagToken(pos=i-1)
             self._scan = self._scan_endtag
-            return i
+            return i+1
         else:
             self._token = XMLStartTagToken(pos=i-1)
             self._scan = self._scan_starttag_name

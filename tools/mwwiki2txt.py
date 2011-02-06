@@ -11,7 +11,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-from pymwp.mwtokenizer import WikiToken, XMLTagToken
+from pymwp.mwtokenizer import WikiToken, XMLTagToken, XMLEmptyTagToken
 from pymwp.mwparser import WikiTextParser
 from pymwp.mwparser import WikiTree, WikiXMLTree, WikiArgTree
 from pymwp.mwparser import WikiSpecialTree, WikiCommentTree
@@ -53,6 +53,9 @@ class WikiTextExtractor(WikiTextParser):
             self.convert(fp, self.get_root())
         elif tree is WikiToken.PAR:
             fp.write('\n')
+        elif isinstance(tree, XMLEmptyTagToken):
+            if tree.name in XMLTagToken.BR_TAG:
+                fp.write('\n')
         elif isinstance(tree, unicode):
             fp.write(rmsp(tree).encode(self.codec, 'ignore'))
         elif isinstance(tree, WikiSpecialTree):
@@ -60,10 +63,8 @@ class WikiTextExtractor(WikiTextParser):
         elif isinstance(tree, WikiCommentTree):
             pass
         elif isinstance(tree, WikiXMLTree):
-            if tree.xml.name == 'ref':
+            if tree.xml.name in XMLTagToken.NO_TEXT:
                 pass
-            elif tree.xml.name in XMLTagToken.BR_TAG:
-                fp.write('\n')
             else:
                 for c in tree:
                     self.convert(fp, c)
@@ -215,6 +216,8 @@ class MWCDB2Text(object):
         src.close()
         dst.close()
         self.writer.add(key, dstbuf.getvalue())
+        key = '%d:title' % pageid
+        self.writer.add(key, self.reader[key])
         return
 
     def convert_all(self):

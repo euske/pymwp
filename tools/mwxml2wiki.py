@@ -142,7 +142,7 @@ def main(argv):
             revisionlimit=revisionlimit)
     else:
         parser = MWDump2File(
-            output=getfp(outout, mode='w'),
+            outfp=getfp(output, mode='w'),
             template=template, codec=codec, titleline=titleline, gzip=gzip,
             titlepat=titlepat, 
             revisionlimit=revisionlimit)
