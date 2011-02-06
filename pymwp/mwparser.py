@@ -51,11 +51,6 @@ class WikiTree(object):
             self._subtree.append(t)
         return
 
-    def add_arg(self):
-        tree = WikiArgTree()
-        self.append(tree)
-        return tree
-    
     def finish(self):
         return
 
@@ -85,6 +80,9 @@ class WikiXMLTree(WikiTree):
         return '<%s %r>' % (self.__class__.__name__, self.xml)
     def get_attr(self, name, value=None):
         return self.xml.get_attr(name, value=value)
+class WikiXMLParTree(WikiXMLTree): pass
+class WikiXMLTableTree(WikiXMLTree): pass
+class WikiXMLTableRowTree(WikiXMLTree): pass
 class WikiCommentTree(WikiSpanTree): pass
 class WikiSpecialTree(WikiSpanTree): pass
 class WikiKeywordTree(WikiSpanTree): pass
@@ -104,23 +102,11 @@ class WikiHeadlineTree(WikiDivTree): pass
 ##
 class WikiTextParser(WikiTextTokenizer):
 
-    CLOSING = (
-        WikiToken.SPECIAL_CLOSE,
-        WikiToken.KEYWORD_CLOSE,
-        WikiToken.LINK_CLOSE,
-        WikiToken.TABLE_CLOSE,
-        WikiToken.TABLE_ROW,
-        WikiToken.TABLE_CAPTION,
-        WikiToken.TABLE_HEADER,
-        WikiToken.TABLE_HEADER_SEP,
-        WikiToken.TABLE_DATA,
-        WikiToken.TABLE_DATA_SEP,
-        )
     def __init__(self):
         WikiTextTokenizer.__init__(self)
         self._root = WikiPageTree()
-        self._stack = [(self._root, self._parse_top)]
-        (self._tree, self._parse) = self._stack.pop()
+        self._stack = [(self._root, self._parse_top, set())]
+        (self._tree, self._parse, self._stoptokens) = self._stack.pop()
         return
 
     def get_root(self):
@@ -148,34 +134,47 @@ class WikiTextParser(WikiTextTokenizer):
         print >>sys.stderr, (self._parse, pos, token)
         return
 
-    def _push_context(self, tree, parse, token=None):
+    def _push_context(self, tree, parse, stoptoken=None):
         self._tree.append(tree)
-        self._stack.append((self._tree, self._parse))
+        self._stack.append((self._tree, self._parse, self._stoptokens))
         self._tree = tree
         self._parse = parse
+        if stoptoken is not None:
+            self._stoptokens = self._stoptokens.copy()
+            self._stoptokens.add(stoptoken)
         return
 
     def _pop_context(self):
         assert self._stack
         self._tree.finish()
-        (self._tree, self._parse) = self._stack.pop()
+        (self._tree, self._parse, self._stoptokens) = self._stack.pop()
         return
 
+    def _is_closing(self, t):
+        return (t in self._stoptokens or
+                (isinstance(t, XMLTagToken) and t.name in self._stoptokens))
+
     def _parse_top(self, i, (pos,t)):
-        if isinstance(t, XMLStartTagToken) and t.is_open():
-            self._push_context(WikiXMLTree(t), self._parse_xml, t)
+        if isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_TAG:
+            self._push_context(WikiXMLTableTree(t), self._parse_xml_table,
+                               t.name)
+            return i+1
+        elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.PAR_TAG:
+            self._push_context(WikiXMLParTree(t), self._parse_xml_par,
+                               t.name)
+            return i+1
+        elif isinstance(t, XMLStartTagToken):
+            self._push_context(WikiXMLTree(t), self._parse_xml,
+                               t.name)
             return i+1
         elif isinstance(t, WikiItemizeToken):
-            self._push_context(WikiItemizeTree(t), self._parse_itemize,
-                               WikiToken.EOL,
+            self._push_context(WikiItemizeTree(t), self._parse_itemize)
             return i+1
         elif isinstance(t, WikiHeadlineToken):
-            self._push_context(WikiHeadlineTree(t), self._parse_headline,
-                               WikiToken.EOL)
+            self._push_context(WikiHeadlineTree(t), self._parse_headline)
             return i+1
         elif t is WikiToken.PRE:
-            self._push_context(WikiPreTree(t), self._parse_pre,
-                               WikiToken.EOL)
+            self._push_context(WikiPreTree(t), self._parse_pre)
             return i+1
         elif t is WikiToken.TABLE_OPEN:
             self._push_context(WikiTableTree(t), self._parse_table,
@@ -209,7 +208,7 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.PRE):
             self._tree.append(t)
             return i+1
-        elif isinstance(t, XMLStartTagToken):
+        elif isinstance(t, XMLTagToken):
             self._tree.append(t)
             return i+1
         elif isinstance(t, WikiToken):
@@ -236,18 +235,64 @@ class WikiTextParser(WikiTextTokenizer):
         if isinstance(t, XMLEndTagToken):
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
             return self._parse_top(i, (pos,t))
 
+    def _parse_xml_par(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiXMLParTree), self._tree
+        if isinstance(t, XMLEndTagToken):
+            self._pop_context()
+            return i+1
+        elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.PAR_TAG:
+            self._pop_context()
+            return i
+        elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_ROW_TAG:
+            self._pop_context()
+            return i
+        elif self._is_closing(t):
+            self._pop_context()
+            return i
+        else:
+            return self._parse_top(i, (pos,t))
+
+    def _parse_xml_table(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiXMLTableTree), self._tree
+        if isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_ROW_TAG:
+            self._push_context(WikiXMLTableRowTree(t), self._parse_xml_table_row,
+                               t.name)
+            return i+1
+        elif isinstance(t, XMLEndTagToken):
+            self._pop_context()
+            return i+1
+        elif self._is_closing(t):
+            self._pop_context()
+            return i
+        else:
+            return self._parse_top(i, (pos,t))
+        
+    def _parse_xml_table_row(self, i, (pos,t)):
+        assert isinstance(self._tree, WikiXMLTableRowTree), self._tree
+        if isinstance(t, XMLEndTagToken):
+            self._pop_context()
+            return i+1
+        elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_ROW_TAG:
+            self._pop_context()
+            return i
+        elif self._is_closing(t):
+            self._pop_context()
+            return i
+        else:
+            return self._parse_top(i, (pos,t))
+        
     def _parse_special(self, i, (pos,t)):
         assert isinstance(self._tree, WikiSpecialTree), self._tree
         if t is WikiToken.SPECIAL_CLOSE:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -260,7 +305,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.KEYWORD_CLOSE:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -273,7 +318,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.LINK_CLOSE:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -286,7 +331,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.BAR:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -297,7 +342,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.BLANK:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -308,10 +353,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is self._tree.token:
             self._pop_context()
             return i+1
-        elif isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -322,10 +364,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.EOL:
             self._pop_context()
             return i+1
-        elif isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -336,10 +375,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.EOL:
             self._pop_context()
             return i+1
-        elif isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -352,10 +388,7 @@ class WikiTextParser(WikiTextTokenizer):
             return i+1
         elif isinstance(t, WikiHeadlineToken):
             return i+1
-        elif isinstance(t, XMLEndTagToken):
-            self._pop_context()
-            return i
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -382,6 +415,9 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.TABLE_DATA_SEP):
             self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return i
+        elif self._is_closing(t):
+            self._pop_context()
+            return i
         else:
             self._push_context(WikiArgTree(), self._parse_table_arg,
                                WikiToken.BAR)                               
@@ -392,7 +428,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.BAR:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -403,7 +439,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.EOL:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -425,7 +461,7 @@ class WikiTextParser(WikiTextTokenizer):
             WikiToken.TABLE_DATA_SEP):
             self._push_context(WikiTableDataTree(t), self._parse_table_data)
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()
             return i
         else:
@@ -437,7 +473,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.EOL:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()            
             return i
         else:
@@ -449,7 +485,7 @@ class WikiTextParser(WikiTextTokenizer):
         if t is WikiToken.EOL:
             self._pop_context()
             return i+1
-        elif t in self.CLOSING:
+        elif self._is_closing(t):
             self._pop_context()            
             return i
         else:

@@ -11,7 +11,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-from pymwp.pycdb import cdbmake
+from pymwp.pycdb import CDBMaker
 from pymwp.mwxmldump import MWXMLDumpFilter
 
 
@@ -19,7 +19,7 @@ from pymwp.mwxmldump import MWXMLDumpFilter
 ##
 class MWDump2File(MWXMLDumpFilter):
 
-    def __init__(self, output=sys.stdout, template=None,
+    def __init__(self, outfp=sys.stdout, template=None,
                  codec='utf-8', gzip=False, titleline=False,
                  titlepat=None, revisionlimit=1):
         MWXMLDumpFilter.__init__(
@@ -27,12 +27,13 @@ class MWDump2File(MWXMLDumpFilter):
             revisionlimit=revisionlimit)
         self.gzip = gzip
         self.codec = codec
-        self.output = output
+        self.outfp = outfp
         self.template = template
         self.titleline = titleline
         return
 
     def open_file(self, pageid, title, revision):
+        print >>sys.stderr, (pageid, title, revision)
         if self.template is not None:
             name = title.encode('utf-8').encode('quopri_codec')
             path = (self.template % {'name':name, 'pageid':pageid, 'revision':revision})
@@ -41,7 +42,7 @@ class MWDump2File(MWXMLDumpFilter):
             else:
                 fp = open(path, 'w')
         else:
-            fp = self.output
+            fp = self.outfp
         if self.titleline:
             fp.write(title+'\n')
         return fp
@@ -65,7 +66,7 @@ class MWDump2CDB(MWXMLDumpFilter):
         MWXMLDumpFilter.__init__(
             self, titlepat=titlepat, 
             revisionlimit=revisionlimit)
-        self._maker = cdbmake(path, path+'.tmp')
+        self._maker = CDBMaker(path)
         self._key = None
         return
 
@@ -74,8 +75,13 @@ class MWDump2CDB(MWXMLDumpFilter):
         self._maker.finish()
         return
 
+    def start_page(self, pageid, title):
+        self._maker.add('%d:title' % pageid, title.encode('utf-8'))
+        return
+    
     def open_file(self, pageid, title, revision):
-        self._key = '%s:%d' % (title.encode('utf-8'), revision)
+        print >>sys.stderr, (pageid, title, revision)
+        self._key = '%d/%d' % (pageid,  revision)
         buf = StringIO()
         fp = GzipFile(mode='w', fileobj=buf)
         fp.buf = buf
@@ -95,15 +101,26 @@ class MWDump2CDB(MWXMLDumpFilter):
 # main
 def main(argv):
     import getopt
+    def getfp(path, mode='r'):
+        if path == '-' and mode == 'r':
+            return sys.stdin
+        elif path == '-' and mode == 'w':
+            return sys.stdout
+        elif path.endswith('.gz'):
+            return GzipFile(path, mode=mode)
+        elif path.endswith('.bz2'):
+            return BZ2File(path, mode=mode)
+        else:
+            return open(path, mode=mode+'b')
     def usage():
-        print ('usage: %s [-C cdbpath] [-t template] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-o output] [-t template] [-c codec] [-T] [-Z] '
                '[-e titlepat] [-r revisionlimit] [file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'C:t:c:TZe:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'o:t:c:TZe:r:')
     except getopt.GetoptError:
         return usage()
-    cdbpath = None
+    output = '-'
     codec = 'utf-8'
     template = None
     titlepat = None
@@ -111,32 +128,26 @@ def main(argv):
     gzip = False
     titleline = False
     for (k, v) in opts:
-        if k == '-C': cdbpath = v
+        if k == '-o': output = v
         elif k == '-t': template = v
         elif k == '-c': codec = v 
         elif k == '-T': titleline = True
         elif k == '-Z': gzip = True
         elif k == '-e': titlepat = re.compile(v)
         elif k == '-r': revisionlimit = int(v)
-    if cdbpath is not None:
+    if output.endswith('.cdb'):
         parser = MWDump2CDB(
-            cdbpath, 
+            output, 
             titlepat=titlepat, 
             revisionlimit=revisionlimit)
     else:
         parser = MWDump2File(
+            output=getfp(outout, mode='w'),
             template=template, codec=codec, titleline=titleline, gzip=gzip,
             titlepat=titlepat, 
             revisionlimit=revisionlimit)
     for path in (args or ['-']):
-        if path == '-':
-            fp = sys.stdin
-        elif path.endswith('.gz'):
-            fp = GzipFile(path)
-        elif path.endswith('.bz2'):
-            fp = BZ2File(path)
-        else:
-            fp = open(path)
+        fp = getfp(path)
         try:
             parser.feed_file(fp)
         finally:

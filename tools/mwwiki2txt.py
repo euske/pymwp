@@ -11,7 +11,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-from pymwp.mwtokenizer import WikiToken
+from pymwp.mwtokenizer import WikiToken, XMLTagToken
 from pymwp.mwparser import WikiTextParser
 from pymwp.mwparser import WikiTree, WikiXMLTree, WikiArgTree
 from pymwp.mwparser import WikiSpecialTree, WikiCommentTree
@@ -19,7 +19,7 @@ from pymwp.mwparser import WikiKeywordTree, WikiLinkTree
 from pymwp.mwparser import WikiSpanTree, WikiDivTree
 from pymwp.mwparser import WikiTableTree, WikiTableCellTree
 from pymwp.mwxmldump import MWXMLDumpFilter
-from pymwp.pycdb import CDBReader
+from pymwp.pycdb import CDBReader, CDBMaker
 
 
 SPC = re.compile(r'\s+')
@@ -48,9 +48,9 @@ class WikiTextExtractor(WikiTextParser):
             self.error('invalid token(%d): %r\n' % (pos, token))
         return
 
-    def dump(self, fp, tree=None):
+    def convert(self, fp, tree=None):
         if tree is None:
-            self.dump(fp, self.get_root())
+            self.convert(fp, self.get_root())
         elif tree is WikiToken.PAR:
             fp.write('\n')
         elif isinstance(tree, unicode):
@@ -62,11 +62,13 @@ class WikiTextExtractor(WikiTextParser):
         elif isinstance(tree, WikiXMLTree):
             if tree.xml.name == 'ref':
                 pass
-            elif tree.xml.name == 'br':
+            elif tree.xml.name in XMLTagToken.BR_TAG:
                 fp.write('\n')
             else:
                 for c in tree:
-                    self.dump(fp, c)
+                    self.convert(fp, c)
+                if tree.xml.name in XMLTagToken.PAR_TAG:
+                    fp.write('\n')
         elif isinstance(tree, WikiKeywordTree):
             if tree:
                 if isinstance(tree[0], WikiTree):
@@ -74,29 +76,29 @@ class WikiTextExtractor(WikiTextParser):
                 else:
                     name = tree[0]
                 if isinstance(name, unicode) and not isignored(name):
-                    self.dump(fp, tree[-1])
+                    self.convert(fp, tree[-1])
         elif isinstance(tree, WikiLinkTree):
             if 2 <= len(tree):
                 for c in tree[1:]:
-                    self.dump(fp, c)
+                    self.convert(fp, c)
                     fp.write(' ')
             elif tree:
-                self.dump(fp, tree[0])
+                self.convert(fp, tree[0])
         elif isinstance(tree, WikiTableCellTree):
             if tree:
-                self.dump(fp, tree[-1])
+                self.convert(fp, tree[-1])
                 fp.write('\n')
         elif isinstance(tree, WikiTableTree):
             for c in tree:
                 if not isinstance(c, WikiArgTree):
-                    self.dump(fp, c)
+                    self.convert(fp, c)
         elif isinstance(tree, WikiDivTree):
             for c in tree:
-                self.dump(fp, c)
+                self.convert(fp, c)
             fp.write('\n')
         elif isinstance(tree, WikiTree):
             for c in tree:
-                self.dump(fp, c)
+                self.convert(fp, c)
         return
 
 
@@ -119,9 +121,9 @@ class WikiLinkExtractor(WikiTextParser):
             self.error('invalid token(%d): %r\n' % (pos, token))
         return
 
-    def dump(self, fp, tree=None):
+    def convert(self, fp, tree=None):
         if tree is None:
-            self.dump(fp, self.get_root())
+            self.convert(fp, self.get_root())
         elif isinstance(tree, WikiKeywordTree):
             if tree:
                 if isinstance(tree[0], WikiTree):
@@ -148,7 +150,7 @@ class WikiLinkExtractor(WikiTextParser):
                     fp.write('\n')
         elif isinstance(tree, WikiTree):
             for c in tree:
-                self.dump(fp, c)
+                self.convert(fp, c)
         return
 
 
@@ -157,23 +159,23 @@ class WikiLinkExtractor(WikiTextParser):
 class MWDump2Text(MWXMLDumpFilter):
 
     def __init__(self, factory,
-                 output=sys.stdout, codec='utf-8', titleline=True,
+                 outfp=sys.stdout, codec='utf-8', titleline=True,
                  titlepat=None, revisionlimit=1):
         MWXMLDumpSplitter.__init__(
             self,
             titlepat=titlepat, revisionlimit=revisionlimit)
         self.factory = factory
         self.codec = codec
-        self.output = output
+        self.outfp = outfp
         self.titleline = titleline
         return
 
     def open_file(self, pageid, title, revision):
-        print >>sys.stderr, pageid
+        print >>sys.stderr, (title,revision)
         if self.titleline:
             self.write(title+'\n')
         self._textparser = self.factory(self.codec)
-        return self.output
+        return self.outfp
     
     def write_file(self, fp, text):
         self._textparser.feed_text(text)
@@ -181,7 +183,7 @@ class MWDump2Text(MWXMLDumpFilter):
     
     def close_file(self, fp):
         self._textparser.close()
-        self._textparser.dump(fp)
+        self._textparser.convert(fp)
         self.write('\f\n')
         return
 
@@ -190,101 +192,114 @@ class MWDump2Text(MWXMLDumpFilter):
 ##
 class MWCDB2Text(object):
 
-
-    def __init__(self, path, factory,
-                 output=sys.stdout, 
-                 codec='utf-8',
-                 titleline=True,
-                 titlepat=None, revisionlimit=1):
-        self.reader = CDBReader(path)
+    def __init__(self, srcpath, dstpath, factory):
+        self.reader = CDBReader(srcpath)
+        self.writer = CDBMaker(dstpath)
         self.factory = factory
-        self.codec = codec
-        self.output = output
-        self.titleline = titleline
         return
 
-    def dump(self, title, revision=0):
-        key = '%s:%d' % (title.encode('utf-8'), revision)
-        buf = StringIO(self.reader[key])
-        fp = GzipFile(mode='r', fileobj=buf)
-        textparser = self.factory(self.codec)
-        textparser.feed_text(fp.read().decode('utf-8'))
+    def close(self):
+        self.writer.finish()
+        return
+
+    def convert(self, pageid, revision=0):
+        key = '%d/%d' % (pageid, revision)
+        srcbuf = StringIO(self.reader[key])
+        src = GzipFile(mode='r', fileobj=srcbuf)
+        dstbuf = StringIO()
+        dst = GzipFile(mode='w', fileobj=dstbuf)
+        textparser = self.factory('utf-8')
+        textparser.feed_text(src.read().decode('utf-8'))
         textparser.close()
-        self.output.write(title.encode(self.codec, 'ignore'))
-        textparser.dump(self.output)
-        self.output.write('\f\n')
+        textparser.convert(dst)
+        src.close()
+        dst.close()
+        self.writer.add(key, dstbuf.getvalue())
         return
 
-    def dumpall(self):
+    def convert_all(self):
         for key in self.reader:
-            i = key.rindex(':')
-            title = key[:i].decode('utf-8')
-            revision = int(key[i+1:])
-            self.dump(title, revision)
+            try:
+                i = key.rindex('/')
+                pageid = int(key[:i])
+                revision = int(key[i+1:])
+            except ValueError:
+                continue
+            print >>sys.stderr, (pageid,revision)
+            self.convert(pageid, revision)
         return
 
 
 # main
 def main(argv):
     import getopt
-    def getfp(path):
-        if path == '-':
+    def getfp(path, mode='r'):
+        if path == '-' and mode == 'r':
             return sys.stdin
+        elif path == '-' and mode == 'w':
+            return sys.stdout
         elif path.endswith('.gz'):
-            return GzipFile(path)
+            return GzipFile(path, mode=mode)
         elif path.endswith('.bz2'):
-            return BZ2File(path)
+            return BZ2File(path, mode=mode)
         else:
-            return open(path, 'rb')
+            return open(path, mode=mode+'b')
     def usage():
-        print ('usage: %s [-X xmldump] [-C cdbdump] [-c codec] [-T] [-L] '
+        print ('usage: %s [-X xmldump] [-C cdbdump] [-o output] [-c codec] [-T] [-L] '
                '[-e titlepat] [-r revisionlimit] [file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'X:C:c:TLe:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'X:C:o:c:TLe:r:')
     except getopt.GetoptError:
         return usage()
     xmldump = None
     cdbdump = None
+    output = None
     codec = 'utf-8'
     titlepat = None
     revisionlimit = 1
     titleline = False
-    output = sys.stdout
     factory = (lambda codec: WikiTextExtractor(codec=codec))
     for (k, v) in opts:
         if k == '-X': xmldump = v
         elif k == '-C': cdbdump = v
+        elif k == '-o': output = v
         elif k == '-c': codec = v 
         elif k == '-T': titleline = True
         elif k == '-L': factory = (lambda codec: WikiLinkExtractor(codec=codec))
         elif k == '-e': titlepat = re.compile(v)
         elif k == '-r': revisionlimit = int(v)
     if xmldump is not None:
+        outfp = getfp(output or '-', 'w')
         parser = MWDump2Text(
-            factory, output=output, codec=codec, titleline=titleline,
+            factory, outfp=outfp,
+            codec=codec, titleline=titleline,
             titlepat=titlepat, revisionlimit=revisionlimit)
         fp = getfp(xmldump)
         parser.feed_file(fp)
         fp.close()
         parser.close()
     elif cdbdump is not None:
-        reader = MWCDB2Text(
-            cdbdump, factory, output=output, codec=codec, titleline=titleline,
-            titlepat=titlepat, revisionlimit=revisionlimit)
+        if not output: return usage()
+        reader = MWCDB2Text(cdbdump, output, factory)
         if args:
-            for title in args:
-                reader.dump(title.decode('utf-8'))
+            for pageid in args:
+                reader.convert(int(pageid))
         else:
-            reader.dumpall()
+            try:
+                reader.convert_all()
+            finally:
+                reader.close()
     else:
+        outfp = getfp(output or '-', 'w')
         for path in (args or ['-']):
+            print >>sys.stderr, path
             parser = factory(codec)
             fp = getfp(path)
             parser.feed_file(fp)
             fp.close()
             parser.close()
-            parser.dump(output)
+            parser.convert(outfp)
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

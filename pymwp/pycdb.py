@@ -53,7 +53,7 @@ def cdbiter(fp, eod):
 # CDBReader
 class CDBReader(object):
   
-  def __init__(self, cdbname, docache=1):
+  def __init__(self, cdbname, docache=False):
     self.name = cdbname
     self._fp = file(cdbname, 'rb')
     hash0 = decode(self._fp.read(2048))
@@ -151,11 +151,11 @@ class CDBReader(object):
 # CDBMaker
 class CDBMaker(object):
 
-  def __init__(self, cdbname, tmpname):
+  def __init__(self, cdbname, tmpname=None):
     self.fn = cdbname
-    self.fntmp = tmpname
+    self.fntmp = tmpname or cdbname+'.tmp'
     self.numentries = 0
-    self._fp = file(tmpname, 'wb')
+    self._fp = file(self.fntmp, 'wb')
     self._pos = 2048                    # sizeof((h,p))*256
     self._bucket = [ array('I') for _ in xrange(256) ]
     return

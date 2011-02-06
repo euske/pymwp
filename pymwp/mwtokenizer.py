@@ -24,10 +24,24 @@ class Token(object):
 ##
 class WikiToken(Token): pass
 class WikiBOLToken(WikiToken): pass
+class WikiVarToken(WikiToken):
+
+    def __init__(self, name=u'', pos=0):
+        Token.__init__(self, name)
+        self.pos = pos
+        return
+    
+class WikiHeadlineToken(WikiVarToken): pass
+class WikiItemizeToken(WikiVarToken): pass
 
 WikiToken.EOL = WikiToken('\n')
 WikiToken.BLANK = WikiToken(' ')
 WikiToken.BAR = WikiToken('|')
+WikiToken.QUOTE2 = WikiToken("''")
+WikiToken.QUOTE3 = WikiToken("'''")
+WikiToken.QUOTE5 = WikiToken("'''''")
+WikiToken.COMMENT_OPEN = WikiToken('<!--')
+WikiToken.COMMENT_CLOSE = WikiToken('-->')
 WikiToken.SPECIAL_OPEN = WikiToken('{{')
 WikiToken.SPECIAL_CLOSE = WikiToken('}}')
 WikiToken.KEYWORD_OPEN = WikiToken('[[')
@@ -45,66 +59,61 @@ WikiToken.TABLE_DATA_SEP = WikiToken('||')
 WikiToken.HR = WikiToken('HR')
 WikiToken.PAR = WikiToken('PAR')
 WikiToken.PRE = WikiToken('PRE')
-WikiToken.QUOTE2 = WikiToken('QUOTE2')
-WikiToken.QUOTE3 = WikiToken('QUOTE3')
-WikiToken.QUOTE5 = WikiToken('QUOTE5')
-WikiToken.COMMENT_OPEN = WikiToken('COMMENT_OPEN')
-WikiToken.COMMENT_CLOSE = WikiToken('COMMENT_CLOSE')
-
-class WikiVarToken(WikiToken):
-
-    def __init__(self, name=u'', pos=0):
-        Token.__init__(self, name)
-        self.pos = pos
-        return
-    
-class WikiHeadlineToken(WikiVarToken): pass
-class WikiItemizeToken(WikiVarToken): pass
     
 
 ##  XMLTagToken
 ##
 class XMLTagToken(Token):
+
+    BR_TAG = ('br',)
+    PAR_TAG = (
+        'p','li','td','th','dt','dd',
+        'h1','h2','h3','h4','h5','h6',
+        'div','pre','blockquote','address',
+        )
+    TABLE_TAG = ('table',)
+    TABLE_ROW_TAG = ('tr',)
     
-    def __init__(self, name=u'', pos=0):
+    def __init__(self, name=u'', pos=0, attr=None):
         Token.__init__(self, name)
         self.pos = pos
+        self.attrs = attr or {}
         return
 
+    def __repr__(self):
+        return ('<%s %r>' %
+                (self.__class__.__name__, self.name))
+
     def get_attr(self, name, value=None):
-        return self._attrs.get(name, value)
+        return self.attrs.get(name, value)
 
 class XMLStartTagToken(XMLTagToken):
     
     def __init__(self, name=u'', pos=0):
         XMLTagToken.__init__(self, name=name, pos=pos)
-        self._attrs = {}
         self._key = self._value = None
         return
     
     def __repr__(self):
         return ('<%s %r%s>' %
                 (self.__class__.__name__, self.name,
-                 ''.join( ' %r=%r' % (k,v) for (k,v) in self._attrs.iteritems() )))
+                 ''.join( ' %r=%r' % (k,v) for (k,v) in self.attrs.iteritems() )))
 
-    def is_open(self):
-        return not self.name.endswith('/')
-    
     def add_char(self, c):
         if self._value is not None:
             self._value += c
         elif self._key is not None:
-            self._key += c.lower()
+            self._key += c
         else:
             XMLTagToken.add_char(self, c)
         return
 
-    def start_key(self):
+    def start_attr_key(self):
         assert self._key is None, self._key
         self._key = u''
         return
 
-    def start_value(self):
+    def start_attr_value(self):
         assert self._key is not None
         assert self._value is None
         self._value = u''
@@ -113,17 +122,15 @@ class XMLStartTagToken(XMLTagToken):
     def end_attr(self):
         assert self._key is not None
         if self._value is None:
-            self._attrs[self._key] = self._key
+            self.attrs[self._key.lower()] = self._key
         else:
-            self._attrs[self._key] = self._value
+            self.attrs[self._key.lower()] = self._value
         self._key = self._value = None
         return
 
-class XMLEndTagToken(XMLTagToken):
+class XMLEndTagToken(XMLTagToken): pass
+class XMLEmptyTagToken(XMLTagToken): pass
 
-    def __repr__(self):
-        return ('<%s %r>' %
-                (self.__class__.__name__, self.name))
 
     
 ##  WikiTextTokenizer
@@ -487,16 +494,6 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_starttag_mid
             return i
 
-    def _scan_starttag_end(self, i, c):
-        assert isinstance(self._token, XMLStartTagToken), self._token
-        if c == '>':
-            self._handle_token(self._token.pos, self._token)
-            self._token = None
-            self._scan = self._scan_main
-            return i+1
-        else:
-            return i+1
-
     def _scan_starttag_mid(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c == '>':
@@ -505,23 +502,34 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1
         elif c == '/':
-            self._token.add_char(c)
+            self._token = XMLEmptyTagToken(
+                self._token.name, self._token.pos, self._token.attrs)
             self._scan = self._scan_starttag_end
             return i+1
         elif c.isspace():
             return i+1
         else:
-            self._token.start_key()
+            self._token.start_attr_key()
             self._scan = self._scan_starttag_attr_key
             return i
     
+    def _scan_starttag_end(self, i, c):
+        assert isinstance(self._token, XMLEmptyTagToken), self._token
+        if c == '>':
+            self._handle_token(self._token.pos, self._token)
+            self._token = None
+            self._scan = self._scan_main
+            return i+1
+        else:
+            return i+1
+
     def _scan_starttag_attr_key(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c == '=':
-            self._token.start_value()
+            self._token.start_attr_value()
             self._scan = self._scan_starttag_attr_value
             return i+1
-        elif c == '>' or c.isspace():
+        elif c == '/' or c == '>' or c.isspace():
             self._token.end_attr()
             self._scan = self._scan_starttag_mid
             return i
@@ -546,7 +554,7 @@ class WikiTextTokenizer(object):
                 self._scan_starttag_attr_value)
             self._scan = self._scan_entity
             return i+1
-        elif c == '>' or c.isspace():
+        elif c == '/' or c == '>' or c.isspace():
             self._token.end_attr()
             self._scan = self._scan_starttag_mid
             return i
