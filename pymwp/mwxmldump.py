@@ -12,8 +12,8 @@ class MWXMLDumpParser(object):
         self._expat.StartElementHandler = self.start_element
         self._expat.EndElementHandler = self.end_element
         self._expat.CharacterDataHandler = self.handle_data
-        self._titleok = self._textok = False
-        self._pageid = 0
+        self._handler = None
+        self._stack = []
         return
 
     def close(self):
@@ -25,45 +25,66 @@ class MWXMLDumpParser(object):
         
     def start_element(self, name, attrs):
         if name == 'page':
-            self._revision = 0
-            self._titleok = False
-        elif name == 'title':
-            self._titleok = True
-            self._title = u''
+            self._revid = None
         elif name == 'revision':
-            self.start_revision(self._pageid, self._title, self._revision)
+            if self._revid is None:
+                self.start_page(self._pageid, self._title)
+        elif name == 'id':
+            if self._stack[-1] == 'page':
+                self._pageid = u''
+                self._handler = self._handle_pageid
+            elif self._stack[-1] == 'revision':
+                self._revid = u''
+                self._handler = self._handle_revid
+        elif name == 'title':
+            if self._stack[-1] == 'page':
+                self._title = u''
+                self._handler = self._handle_title
+        elif name == 'timestamp':
+            if self._stack[-1] == 'revision':
+                self._timestamp = u''
+                self._handler = self._handle_timestamp
         elif name == 'text':
-            self._textok = True
+            if self._stack[-1] == 'revision':
+                self.start_revision(self._pageid, self._title, self._revid, self._timestamp)
+                self._handler = self.handle_text
+        self._stack.append(name)
         return
     
     def end_element(self, name):
-        if name == 'text':
-            self._textok = False
+        self._stack.pop()
+        self._handler = None
+        if name == 'page':
+            self.end_page(self._pageid, self._title)
         elif name == 'revision':
-            self.end_revision()
-            self._revision += 1
-        elif name == 'title':
-            self._titleok = False
-            self.start_page(self._pageid, self._title)
-        elif name == 'page':
-            self.end_page()
-            self._pageid += 1
-        return
-    
-    def handle_data(self, data):
-        if self._textok:
-            self.handle_text(data)
-        elif self._titleok:
-            self._title += data
+            self.end_revision(self._pageid, self._title, self._revid, self._timestamp)
         return
 
+    def handle_data(self, data):
+        if self._handler is not None:
+            self._handler(data)
+        return
+
+    def _handle_pageid(self, data):
+        self._pageid += data
+        return
+    def _handle_title(self, data):
+        self._title += data
+        return
+    def _handle_revid(self, data):
+        self._revid += data
+        return
+    def _handle_timestamp(self, data):
+        self._timestamp += data
+        return
+    
     def start_page(self, pageid, title):
         return
-    def end_page(self):
+    def end_page(self, pageid, title):
         return
-    def start_revision(self, pageid, title, revision):
+    def start_revision(self, pageid, title, revid, timestamp):
         return
-    def end_revision(self):
+    def end_revision(self, pageid, title, revid, timestamp):
         return
     def handle_text(self, text):
         return
@@ -73,32 +94,30 @@ class MWXMLDumpParser(object):
 ##
 class MWXMLDumpFilter(MWXMLDumpParser):
 
-    def __init__(self, titlepat=None, revisionlimit=1):
+    def __init__(self):
         MWXMLDumpParser.__init__(self)
-        self.titlepat = titlepat
-        self.revisionlimit = revisionlimit
         self._fp = None
         return
 
-    def start_revision(self, pageid, title, revision):
-        if self.revisionlimit <= revision: return
-        if self.titlepat is not None:
-            if not self.titlepat.search(title): return
-        self._fp = self.open_file(pageid, title, revision)
+    def start_revision(self, pageid, title, revid, timestamp):
+        MWXMLDumpParser.start_revision(self, pageid, title, revid, timestamp)
+        self._fp = self.open_file(pageid, title, revid, timestamp)
         return
     
-    def end_revision(self):
+    def end_revision(self, pageid, title, revid, timestamp):
+        MWXMLDumpParser.end_revision(self, pageid, title, revid, timestamp)
         if self._fp is not None:
             self.close_file(self._fp)
             self._fp = None
         return
     
     def handle_text(self, text):
+        MWXMLDumpParser.handle_text(self, text)
         if self._fp is not None:
             self.write_file(self._fp, text)
         return
 
-    def open_file(self, pageid, title, revision):
+    def open_file(self, pageid, title, revid, timestamp):
         raise NotImplementedError
     def close_file(self, fp):
         raise NotImplementedError
@@ -110,7 +129,7 @@ class MWXMLDumpFilter(MWXMLDumpParser):
 def main(argv):
     args = argv[1:] or ['-']
     class TitleExtractor(MWXMLDumpParser):
-        def start_revision(self, pageid, title, revision):
+        def start_revision(self, pageid, title, revid, timestamp):
             print pageid, title.encode('utf-8')
             return
     for path in args:

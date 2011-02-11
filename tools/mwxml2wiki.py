@@ -1,9 +1,8 @@
 #!/usr/bin/env python2
 #
 # usage:
-#  $ mwdump2wiki.py -n10 -t 'article%(pageid)05d.txt' jawiki.xml.bz2
+#  $ mwdump2wiki.py -n10 -t 'article%(pageid)08d.txt' jawiki.xml.bz2
 #
-import re
 import sys
 from gzip import GzipFile
 from bz2 import BZ2File
@@ -15,28 +14,25 @@ from pymwp.pycdb import CDBMaker
 from pymwp.mwxmldump import MWXMLDumpFilter
 
 
-##  MWDump2File
+##  MWXMLDump2File
 ##
-class MWDump2File(MWXMLDumpFilter):
+class MWXMLDump2File(MWXMLDumpFilter):
 
-    def __init__(self, outfp=sys.stdout, template=None,
-                 codec='utf-8', gzip=False, titleline=False,
-                 titlepat=None, revisionlimit=1):
-        MWXMLDumpFilter.__init__(
-            self, titlepat=titlepat, 
-            revisionlimit=revisionlimit)
-        self.gzip = gzip
-        self.codec = codec
+    def __init__(self, outfp=None, template=None,
+                 codec='utf-8', gzip=False, titleline=False):
+        MWXMLDumpFilter.__init__(self)
         self.outfp = outfp
         self.template = template
+        self.codec = codec
+        self.gzip = gzip
         self.titleline = titleline
         return
 
-    def open_file(self, pageid, title, revision):
-        print >>sys.stderr, (pageid, title, revision)
+    def open_file(self, pageid, title, revid, timestamp):
+        print >>sys.stderr, (pageid, title, revid)
         if self.template is not None:
             name = title.encode('utf-8').encode('quopri_codec')
-            path = (self.template % {'name':name, 'pageid':pageid, 'revision':revision})
+            path = (self.template % {'name':name, 'pageid':int(pageid), 'revid':int(revid)})
             if self.gzip:
                 fp = GzipFile(path, 'w')
             else:
@@ -48,26 +44,23 @@ class MWDump2File(MWXMLDumpFilter):
         return fp
 
     def close_file(self, fp):
-        if self.template is not None:
+        if fp is not self.outfp:
             fp.close()
         return
 
     def write_file(self, fp, text):
         fp.write(text.encode(self.codec, 'ignore'))
         return
-            
 
-##  MWDump2CDB
+
+##  MWXMLDump2CDB
 ##
-class MWDump2CDB(MWXMLDumpFilter):
+class MWXMLDump2CDB(MWXMLDumpFilter):
 
-    def __init__(self, path,
-                 titlepat=None, revisionlimit=1):
-        MWXMLDumpFilter.__init__(
-            self, titlepat=titlepat, 
-            revisionlimit=revisionlimit)
+    def __init__(self, path):
+        MWXMLDumpFilter.__init__(self)
         self._maker = CDBMaker(path)
-        self._key = None
+        self._key = self._value = None
         return
 
     def close(self):
@@ -76,21 +69,32 @@ class MWDump2CDB(MWXMLDumpFilter):
         return
 
     def start_page(self, pageid, title):
-        self._maker.add('%d:title' % pageid, title.encode('utf-8'))
+        MWXMLDumpFilter.start_page(self, pageid, title)
+        self._maker.add('%s:title' % pageid, title.encode('utf-8'))
+        self._revs = []
+        return
+
+    def start_revision(self, pageid, title, revid, timestamp):
+        MWXMLDumpFilter.start_revision(self, pageid, title, revid, timestamp)
+        self._revs.append(revid)
+        return
+
+    def end_page(self, pageid, title):
+        MWXMLDumpFilter.end_page(self, pageid, title)
+        revs = ' '.join( str(revid) for revid in self._revs )
+        self._maker.add('%s:revs' % pageid, revs)
         return
     
-    def open_file(self, pageid, title, revision):
-        print >>sys.stderr, (pageid, title, revision)
-        self._key = '%d/%d' % (pageid,  revision)
-        buf = StringIO()
-        fp = GzipFile(mode='w', fileobj=buf)
-        fp.buf = buf
-        return fp
+    def open_file(self, pageid, title, revid, timestamp):
+        print >>sys.stderr, (pageid, title, revid)
+        self._key = '%s/%s:text' % (pageid, revid)
+        self._value = StringIO()
+        return GzipFile(mode='w', fileobj=self._value)
 
     def close_file(self, fp):
         fp.close()
-        self._maker.add(self._key, fp.buf.getvalue())
-        self._key = None
+        self._maker.add(self._key, self._value.getvalue())
+        self._key = self._value = None
         return
 
     def write_file(self, fp, text):
@@ -113,18 +117,15 @@ def main(argv):
         else:
             return open(path, mode=mode+'b')
     def usage():
-        print ('usage: %s [-o output] [-t template] [-c codec] [-T] [-Z] '
-               '[-e titlepat] [-r revisionlimit] [file ...]') % argv[0]
+        print ('usage: %s [-o output] [-t template] [-c codec] [-T] [-Z] [file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'o:t:c:TZe:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'o:t:c:TZ')
     except getopt.GetoptError:
         return usage()
     output = '-'
     codec = 'utf-8'
     template = None
-    titlepat = None
-    revisionlimit = 1
     gzip = False
     titleline = False
     for (k, v) in opts:
@@ -133,19 +134,12 @@ def main(argv):
         elif k == '-c': codec = v 
         elif k == '-T': titleline = True
         elif k == '-Z': gzip = True
-        elif k == '-e': titlepat = re.compile(v)
-        elif k == '-r': revisionlimit = int(v)
     if output.endswith('.cdb'):
-        parser = MWDump2CDB(
-            output, 
-            titlepat=titlepat, 
-            revisionlimit=revisionlimit)
+        parser = MWXMLDump2CDB(output)
     else:
-        parser = MWDump2File(
-            outfp=getfp(output, mode='w'),
-            template=template, codec=codec, titleline=titleline, gzip=gzip,
-            titlepat=titlepat, 
-            revisionlimit=revisionlimit)
+        parser = MWXMLDump2File(
+            outfp=getfp(output, mode='w'), template=template,
+            codec=codec, gzip=gzip, titleline=titleline)
     for path in (args or ['-']):
         fp = getfp(path)
         try:
