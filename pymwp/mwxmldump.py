@@ -31,18 +31,18 @@ class MWXMLDumpParser(object):
                 self.start_page(self._pageid, self._title)
         elif name == 'id':
             if self._stack[-1] == 'page':
-                self._pageid = u''
+                self._pageid = ''
                 self._handler = self._handle_pageid
             elif self._stack[-1] == 'revision':
-                self._revid = u''
+                self._revid = ''
                 self._handler = self._handle_revid
         elif name == 'title':
             if self._stack[-1] == 'page':
-                self._title = u''
+                self._title = ''
                 self._handler = self._handle_title
         elif name == 'timestamp':
             if self._stack[-1] == 'revision':
-                self._timestamp = u''
+                self._timestamp = ''
                 self._handler = self._handle_timestamp
         elif name == 'text':
             if self._stack[-1] == 'revision':
@@ -130,7 +130,7 @@ def main(argv):
     args = argv[1:] or ['-']
     class TitleExtractor(MWXMLDumpParser):
         def start_revision(self, pageid, title, revid, timestamp):
-            print pageid, title.encode('utf-8')
+            print (pageid, title)
             return
     for path in args:
         if path == '-':

@@ -33,7 +33,7 @@ class WikiTree(object):
         return self._subtree[i:j]
 
     def get_text(self):
-        s = u''
+        s = ''
         for x in self:
             if isinstance(x, WikiTree):
                 s += x.get_text()
@@ -521,7 +521,7 @@ def main(argv):
     args = argv[1:] or ['-']
     codec = 'utf-8'
     for path in args:
-        print >>sys.stderr, path
+        sys.stderr.write(path+'\n')
         if path == '-':
             fp = sys.stdin
         elif path.endswith('.gz'):
@@ -540,16 +540,16 @@ def main(argv):
         parser.close()
         def f(x, i=0):
             if isinstance(x, WikiTree):
-                print ' '*i+'('+repr(x)
+                print (' '*i+'('+repr(x))
                 for c in x:
                     f(c, i+1)
-                print ' '*i+')'
+                print (' '*i+')')
             elif isinstance(x, WikiToken):
-                print ' '*i+repr(x)
+                print (' '*i+repr(x))
             elif isinstance(x, XMLTagToken):
-                print ' '*i+repr(x)
+                print (' '*i+repr(x))
             elif isinstance(x, basestring):
-                print ' '*i+repr(x)
+                print (' '*i+repr(x))
             else:
                 assert 0, x
         f(parser.get_root())

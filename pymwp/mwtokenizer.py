@@ -1,6 +1,9 @@
 #!/usr/bin/env python2
 import sys
-from htmlentitydefs import name2codepoint
+try:
+    from htmlentitydefs import name2codepoint
+except ImportError:
+    from html.entities import name2codepoint
 
 
 ##  Token
@@ -26,7 +29,7 @@ class WikiToken(Token): pass
 class WikiBOLToken(WikiToken): pass
 class WikiVarToken(WikiToken):
 
-    def __init__(self, name=u'', pos=0):
+    def __init__(self, name='', pos=0):
         Token.__init__(self, name)
         self.pos = pos
         return
@@ -76,7 +79,7 @@ class XMLTagToken(Token):
     TABLE_TAG = ('table',)
     TABLE_ROW_TAG = ('tr',)
     
-    def __init__(self, name=u'', pos=0, attr=None):
+    def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
         self.pos = pos
         self.attrs = attr or {}
@@ -91,7 +94,7 @@ class XMLTagToken(Token):
 
 class XMLStartTagToken(XMLTagToken):
     
-    def __init__(self, name=u'', pos=0):
+    def __init__(self, name='', pos=0):
         XMLTagToken.__init__(self, name=name, pos=pos)
         self._key = self._value = None
         return
@@ -112,13 +115,13 @@ class XMLStartTagToken(XMLTagToken):
 
     def start_attr_key(self):
         assert self._key is None, self._key
-        self._key = u''
+        self._key = ''
         return
 
     def start_attr_value(self):
         assert self._key is not None
         assert self._value is None
-        self._value = u''
+        self._value = ''
         return
 
     def end_attr(self):
@@ -145,7 +148,7 @@ class WikiTextTokenizer(object):
             self.pos = pos
             self.handler = handler
             self.state = state
-            self.name = u''
+            self.name = ''
             return
 
         def handle_char(self, c):
@@ -618,7 +621,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_comment_h2
             return i+1
         else:
-            self._handle_char(i-1, u'-')
+            self._handle_char(i-1, '-')
             self._scan = self._scan_comment
             return i
 
@@ -635,7 +638,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_comment
             return i+1
         else:
-            self._handle_char(i-1, u'-')
+            self._handle_char(i-1, '-')
             self._scan = self._scan_comment_h2
             return i
 
@@ -665,7 +668,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, u'{')
+            self._handle_char(i-1, '{')
             self._scan = self._scan_main
             return i
 
@@ -675,7 +678,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, u'}')
+            self._handle_char(i-1, '}')
             self._scan = self._scan_main
             return i
 
@@ -684,7 +687,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_q2
             return i+1
         else:
-            self._handle_char(i-1, u"'")
+            self._handle_char(i-1, "'")
             self._scan = self._scan_main
             return i
     
@@ -732,7 +735,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, u'!')
+            self._handle_char(i-1, '!')
             self._scan = self._scan_main
             return i
 
@@ -742,10 +745,10 @@ def main(argv):
     args = argv[1:] or ['-']
     class Tokenizer(WikiTextTokenizer):
         def handle_text(self, pos, text):
-            print pos, repr(text)
+            print (pos, text)
             return
         def handle_token(self, pos, token):
-            print pos, repr(token)
+            print (pos, token)
             return
     codec = 'utf-8'
     for path in args:
