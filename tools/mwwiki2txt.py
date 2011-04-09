@@ -296,7 +296,6 @@ def main(argv):
     else:
         outfp = getfp(output or '-', 'w')
         for path in (args or ['-']):
-            print >>sys.stderr, path
             parser = factory(codec)
             fp = getfp(path)
             parser.feed_file(fp)

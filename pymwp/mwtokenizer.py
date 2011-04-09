@@ -37,31 +37,31 @@ class WikiVarToken(WikiToken):
 class WikiHeadlineToken(WikiVarToken): pass
 class WikiItemizeToken(WikiVarToken): pass
 
-WikiToken.EOL = WikiToken('\n')
-WikiToken.BLANK = WikiToken(' ')
-WikiToken.BAR = WikiToken('|')
-WikiToken.QUOTE2 = WikiToken("''")
-WikiToken.QUOTE3 = WikiToken("'''")
-WikiToken.QUOTE5 = WikiToken("'''''")
-WikiToken.COMMENT_OPEN = WikiToken('<!--')
-WikiToken.COMMENT_CLOSE = WikiToken('-->')
-WikiToken.SPECIAL_OPEN = WikiToken('{{')
-WikiToken.SPECIAL_CLOSE = WikiToken('}}')
-WikiToken.KEYWORD_OPEN = WikiToken('[[')
-WikiToken.KEYWORD_CLOSE = WikiToken(']]')
-WikiToken.LINK_OPEN = WikiToken('[')
-WikiToken.LINK_CLOSE = WikiToken(']')
-WikiToken.TABLE_OPEN = WikiToken('{|')
-WikiToken.TABLE_CLOSE = WikiToken('|}')
-WikiToken.TABLE_ROW = WikiToken('|-')
-WikiToken.TABLE_CAPTION = WikiToken('|+')
-WikiToken.TABLE_HEADER = WikiBOLToken('!')
-WikiToken.TABLE_HEADER_SEP = WikiToken('!!')
-WikiToken.TABLE_DATA = WikiBOLToken('|')
-WikiToken.TABLE_DATA_SEP = WikiToken('||')
-WikiToken.HR = WikiToken('HR')
-WikiToken.PAR = WikiToken('PAR')
-WikiToken.PRE = WikiToken('PRE')
+WikiToken.EOL = WikiToken(u'\n')
+WikiToken.BLANK = WikiToken(u' ')
+WikiToken.BAR = WikiToken(u'|')
+WikiToken.QUOTE2 = WikiToken(u"''")
+WikiToken.QUOTE3 = WikiToken(u"'''")
+WikiToken.QUOTE5 = WikiToken(u"'''''")
+WikiToken.COMMENT_OPEN = WikiToken(u'<!--')
+WikiToken.COMMENT_CLOSE = WikiToken(u'-->')
+WikiToken.SPECIAL_OPEN = WikiToken(u'{{')
+WikiToken.SPECIAL_CLOSE = WikiToken(u'}}')
+WikiToken.KEYWORD_OPEN = WikiToken(u'[[')
+WikiToken.KEYWORD_CLOSE = WikiToken(u']]')
+WikiToken.LINK_OPEN = WikiToken(u'[')
+WikiToken.LINK_CLOSE = WikiToken(u']')
+WikiToken.TABLE_OPEN = WikiToken(u'{|')
+WikiToken.TABLE_CLOSE = WikiToken(u'|}')
+WikiToken.TABLE_ROW = WikiToken(u'|-')
+WikiToken.TABLE_CAPTION = WikiToken(u'|+')
+WikiToken.TABLE_HEADER = WikiBOLToken(u'!')
+WikiToken.TABLE_HEADER_SEP = WikiToken(u'!!')
+WikiToken.TABLE_DATA = WikiBOLToken(u'|')
+WikiToken.TABLE_DATA_SEP = WikiToken(u'||')
+WikiToken.HR = WikiToken(u'HR')
+WikiToken.PAR = WikiToken(u'PAR')
+WikiToken.PRE = WikiToken(u'PRE')
     
 
 ##  XMLTagToken
@@ -224,30 +224,30 @@ class WikiTextTokenizer(object):
 
     def _scan_bol(self, i, c):
         self._line_token = None
-        if c == '\n':
+        if c == u'\n':
             self._handle_token(i, WikiToken.PAR)
             self._scan = self._scan_bol_nl
             return i+1
-        elif c == '-':
+        elif c == u'-':
             self._handle_token(i, WikiToken.HR)
             self._scan = self._scan_bol_hr
             return i+1
-        elif c == '{':
+        elif c == u'{':
             self._scan = self._scan_bol_brace
             return i+1
-        elif c == '|':
+        elif c == u'|':
             self._scan = self._scan_bol_bar
             return i+1
-        elif c == '!':
+        elif c == u'!':
             self._handle_token(i, WikiToken.TABLE_HEADER)
             self._scan = self._scan_main
             return i+1
-        elif c == '=':
+        elif c == u'=':
             self._token = WikiHeadlineToken(pos=i)
             self._line_token = self._token
             self._scan = self._scan_bol_headline
             return i
-        elif c in '*#:;':
+        elif c in u'*#:;':
             self._token = WikiItemizeToken(pos=i)
             self._line_token = self._token
             self._scan = self._scan_bol_itemize
@@ -260,14 +260,14 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_bol_nl(self, i, c):
-        if c == '\n':
+        if c == u'\n':
             return i+1
         else:
             self._scan = self._scan_bol
             return i
 
     def _scan_bol_sp(self, i, c):
-        if c == '\n':
+        if c == u'\n':
             self._scan = self._scan_bol
             return i+1
         elif c.isspace():
@@ -278,14 +278,14 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_bol_hr(self, i, c):
-        if c == '-':
+        if c == u'-':
             return i+1
         else:
             self._scan = self._scan_main
             return i
         
     def _scan_bol_brace(self, i, c):
-        if c == '|':
+        if c == u'|':
             self._handle_token(i-1, WikiToken.TABLE_OPEN)
             self._scan = self._scan_main
             return i+1
@@ -294,15 +294,15 @@ class WikiTextTokenizer(object):
             return i
         
     def _scan_bol_bar(self, i, c):
-        if c == '}':
+        if c == u'}':
             self._handle_token(i-1, WikiToken.TABLE_CLOSE)
             self._scan = self._scan_main
             return i+1
-        elif c == '+':
+        elif c == u'+':
             self._handle_token(i-1, WikiToken.TABLE_CAPTION)
             self._scan = self._scan_main
             return i+1            
-        elif c == '-':
+        elif c == u'-':
             self._handle_token(i-1, WikiToken.TABLE_ROW)
             self._scan = self._scan_main
             return i+1            
@@ -313,7 +313,7 @@ class WikiTextTokenizer(object):
     
     def _scan_bol_headline(self, i, c):
         assert isinstance(self._token, WikiHeadlineToken), self._token
-        if c == '=':
+        if c == u'=':
             self._token.add_char(c)
             return i+1
         else:
@@ -324,7 +324,7 @@ class WikiTextTokenizer(object):
 
     def _scan_bol_itemize(self, i, c):
         assert isinstance(self._token, WikiItemizeToken), self._token
-        if c in '*#:;':
+        if c in u'*#:;':
             self._token.add_char(c)
             return i+1
         else:
@@ -335,20 +335,20 @@ class WikiTextTokenizer(object):
 
     def _scan_main(self, i, c):
         assert self._token is None, self._token
-        if c == '&':
+        if c == u'&':
             self._entity = self.XMLEntityContext2(
                 i,
                 self._handle_char,
                 self._scan_main)
             self._scan = self._scan_entity
             return i+1
-        elif c == '<':
+        elif c == u'<':
             self._scan = self._scan_tag
             return i+1
         elif not self._wiki:
             self._handle_char(i, c)
             return i+1
-        elif c == '\n':
+        elif c == u'\n':
             self._handle_token(i, WikiToken.EOL)
             self._scan = self._scan_bol
             return i+1
@@ -356,30 +356,30 @@ class WikiTextTokenizer(object):
             self._handle_token(i, WikiToken.BLANK)
             self._scan = self._scan_blank
             return i+1
-        elif c == '|':
+        elif c == u'|':
             self._scan = self._scan_bar
             return i+1
-        elif c == '!':
+        elif c == u'!':
             self._scan = self._scan_exc
             return i+1
-        elif (c == '=' and
+        elif (c == u'=' and
               isinstance(self._line_token, WikiHeadlineToken)):
             self._handle_token(i, self._line_token)
             self._scan = self._scan_headline_end
             return i
-        elif c == '[':
+        elif c == u'[':
             self._scan = self._scan_bracket_open
             return i+1
-        elif c == ']':
+        elif c == u']':
             self._scan = self._scan_bracket_close
             return i+1
-        elif c == '{':
+        elif c == u'{':
             self._scan = self._scan_brace_open
             return i+1
-        elif c == '}':
+        elif c == u'}':
             self._scan = self._scan_brace_close
             return i+1
-        elif c == "'":
+        elif c == u"'":
             self._scan = self._scan_q1
             return i+1
         else:
@@ -387,14 +387,14 @@ class WikiTextTokenizer(object):
             return i+1
 
     def _scan_headline_end(self, i, c):
-        if c == '=':
+        if c == u'=':
             return i+1
         else:
             self._scan = self._scan_main
             return i
         
     def _scan_blank(self, i, c):
-        if c == '\n':
+        if c == u'\n':
             self._handle_token(i, WikiToken.EOL)
             self._scan = self._scan_bol
             return i+1
@@ -406,7 +406,7 @@ class WikiTextTokenizer(object):
         
     def _scan_entity(self, i, c):
         assert self._entity is not None
-        if c == '#':
+        if c == u'#':
             self._scan = self._scan_ent_numhex
             return i+1
         else:
@@ -415,7 +415,7 @@ class WikiTextTokenizer(object):
 
     def _scan_ent_numhex(self, i, c):
         assert self._entity is not None
-        if c == 'x' or c == 'X':
+        if c in u'xX':
             self._scan = self._scan_ent_hex
             return i+1
         else:
@@ -435,7 +435,7 @@ class WikiTextTokenizer(object):
                 pass
             self._scan = self._entity.state
             self._entity = None
-            if c == ';':
+            if c == u';':
                 return i+1
             else:
                 return i
@@ -453,7 +453,7 @@ class WikiTextTokenizer(object):
                 pass
             self._scan = self._entity.state
             self._entity = None
-            if c == ';':
+            if c == u';':
                 return i+1
             else:
                 return i
@@ -471,17 +471,17 @@ class WikiTextTokenizer(object):
                 pass
             self._scan = self._entity.state
             self._entity = None
-            if c == ';':
+            if c == u';':
                 return i+1
             else:
                 return i
 
     def _scan_tag(self, i, c):
-        if c == '!':
+        if c == u'!':
             self._handle_token(i-1, WikiToken.COMMENT_OPEN)
             self._scan = self._scan_comment
             return i+1
-        elif c == '/':
+        elif c == u'/':
             self._token = XMLEndTagToken(pos=i-1)
             self._scan = self._scan_endtag
             return i+1
@@ -501,12 +501,12 @@ class WikiTextTokenizer(object):
 
     def _scan_starttag_mid(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
-        if c == '>':
+        if c == u'>':
             self._handle_token(self._token.pos, self._token)
             self._token = None
             self._scan = self._scan_main
             return i+1
-        elif c == '/':
+        elif c == u'/':
             self._token = XMLEmptyTagToken(
                 self._token.name, self._token.pos, self._token.attrs)
             self._scan = self._scan_starttag_end
@@ -520,7 +520,7 @@ class WikiTextTokenizer(object):
     
     def _scan_starttag_end(self, i, c):
         assert isinstance(self._token, XMLEmptyTagToken), self._token
-        if c == '>':
+        if c == u'>':
             self._handle_token(self._token.pos, self._token)
             self._token = None
             self._scan = self._scan_main
@@ -530,11 +530,11 @@ class WikiTextTokenizer(object):
 
     def _scan_starttag_attr_key(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
-        if c == '=':
+        if c == u'=':
             self._token.start_attr_value()
             self._scan = self._scan_starttag_attr_value
             return i+1
-        elif c == '/' or c == '>' or c.isspace():
+        elif c == u'/' or c == u'>' or c.isspace():
             self._token.end_attr()
             self._scan = self._scan_starttag_mid
             return i
@@ -544,22 +544,22 @@ class WikiTextTokenizer(object):
     
     def _scan_starttag_attr_value(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
-        if c == '"':
+        if c == u'"':
             self._scan = self._scan_starttag_attr_value_quote
             self._quote_close = c
             return i+1
-        elif c == "'":
+        elif c == u"'":
             self._scan = self._scan_starttag_attr_value_quote
             self._quote_close = c
             return i+1
-        elif c == '&':
+        elif c == u'&':
             self._entity = self.XMLEntityContext1(
                 i,
                 self._add_value_char,
                 self._scan_starttag_attr_value)
             self._scan = self._scan_entity
             return i+1
-        elif c == '/' or c == '>' or c.isspace():
+        elif c == u'/' or c == u'>' or c.isspace():
             self._token.end_attr()
             self._scan = self._scan_starttag_mid
             return i
@@ -575,7 +575,7 @@ class WikiTextTokenizer(object):
             self._quote_close = None
             self._scan = self._scan_starttag_mid
             return i+1
-        elif c == '&':
+        elif c == u'&':
             self._entity = self.XMLEntityContext1(
                 i,
                 self._add_value_char,
@@ -593,7 +593,7 @@ class WikiTextTokenizer(object):
 
     def _scan_endtag(self, i, c):
         assert isinstance(self._token, XMLEndTagToken), self._token
-        if c == '>':
+        if c == u'>':
             self._handle_token(self._token.pos, self._token)
             self._token = None
             self._scan = self._scan_main
@@ -605,11 +605,11 @@ class WikiTextTokenizer(object):
             return i+1
 
     def _scan_comment(self, i, c):
-        if c == '>':
+        if c == u'>':
             self._handle_token(i, WikiToken.COMMENT_CLOSE)
             self._scan = self._scan_main
             return i+1
-        elif c == '-':
+        elif c == u'-':
             self._scan = self._scan_comment_h1
             return i+1
         else:
@@ -617,16 +617,16 @@ class WikiTextTokenizer(object):
             return i+1
 
     def _scan_comment_h1(self, i, c):
-        if c == '-':
+        if c == u'-':
             self._scan = self._scan_comment_h2
             return i+1
         else:
-            self._handle_char(i-1, '-')
+            self._handle_char(i-1, u'-')
             self._scan = self._scan_comment
             return i
 
     def _scan_comment_h2(self, i, c):
-        if c == '-':
+        if c == u'-':
             self._scan = self._scan_comment_h3
             return i+1
         else:
@@ -634,16 +634,16 @@ class WikiTextTokenizer(object):
             return i+1
 
     def _scan_comment_h3(self, i, c):
-        if c == '-':
+        if c == u'-':
             self._scan = self._scan_comment
             return i+1
         else:
-            self._handle_char(i-1, '-')
+            self._handle_char(i-1, u'-')
             self._scan = self._scan_comment_h2
             return i
 
     def _scan_bracket_open(self, i, c):
-        if c == '[':
+        if c == u'[':
             self._handle_token(i-1, WikiToken.KEYWORD_OPEN)
             self._scan = self._scan_main
             return i+1
@@ -653,7 +653,7 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_bracket_close(self, i, c):
-        if c == ']':
+        if c == u']':
             self._handle_token(i-1, WikiToken.KEYWORD_CLOSE)
             self._scan = self._scan_main
             return i+1
@@ -663,36 +663,36 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_brace_open(self, i, c):
-        if c == '{':
+        if c == u'{':
             self._handle_token(i-1, WikiToken.SPECIAL_OPEN)
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, '{')
+            self._handle_char(i-1, u'{')
             self._scan = self._scan_main
             return i
 
     def _scan_brace_close(self, i, c):
-        if c == '}':
+        if c == u'}':
             self._handle_token(i-1, WikiToken.SPECIAL_CLOSE)
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, '}')
+            self._handle_char(i-1, u'}')
             self._scan = self._scan_main
             return i
 
     def _scan_q1(self, i, c):
-        if c == "'":
+        if c == u"'":
             self._scan = self._scan_q2
             return i+1
         else:
-            self._handle_char(i-1, "'")
+            self._handle_char(i-1, u"'")
             self._scan = self._scan_main
             return i
     
     def _scan_q2(self, i, c):
-        if c == "'":
+        if c == u"'":
             self._scan = self._scan_q3
             return i+1
         else:
@@ -701,7 +701,7 @@ class WikiTextTokenizer(object):
             return i
     
     def _scan_q3(self, i, c):
-        if c == "'":
+        if c == u"'":
             self._scan = self._scan_q4
             return i+1
         else:
@@ -710,7 +710,7 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_q4(self, i, c):
-        if c == "'":
+        if c == u"'":
             self._handle_token(i-4, WikiToken.QUOTE5)
             self._scan = self._scan_main
             return i+1
@@ -720,7 +720,7 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_bar(self, i, c):
-        if c == '|':
+        if c == u'|':
             self._handle_token(i-1, WikiToken.TABLE_DATA_SEP)
             self._scan = self._scan_main
             return i+1
@@ -730,12 +730,12 @@ class WikiTextTokenizer(object):
             return i
 
     def _scan_exc(self, i, c):
-        if c == '!':
+        if c == u'!':
             self._handle_token(i-1, WikiToken.TABLE_HEADER_SEP)
             self._scan = self._scan_main
             return i+1
         else:
-            self._handle_char(i-1, '!')
+            self._handle_char(i-1, u'!')
             self._scan = self._scan_main
             return i
 
