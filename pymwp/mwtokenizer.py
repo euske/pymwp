@@ -509,7 +509,7 @@ class WikiTextTokenizer(object):
         elif c == u'/':
             self._token = XMLEmptyTagToken(
                 self._token.name, self._token.pos, self._token.attrs)
-            self._scan = self._scan_starttag_end
+            self._scan = self._scan_emptytag
             return i+1
         elif c.isspace():
             return i+1
@@ -518,7 +518,7 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_starttag_attr_key
             return i
     
-    def _scan_starttag_end(self, i, c):
+    def _scan_emptytag(self, i, c):
         assert isinstance(self._token, XMLEmptyTagToken), self._token
         if c == u'>':
             self._handle_token(self._token.pos, self._token)
