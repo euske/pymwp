@@ -204,7 +204,7 @@ class MWCDB2Text(object):
         return
 
     def convert(self, pageid, revision=0):
-        key = '%d/%d' % (pageid, revision)
+        key = '%d/%d:text' % (pageid, revision)
         srcbuf = StringIO(self.reader[key])
         src = GzipFile(mode='r', fileobj=srcbuf)
         dstbuf = StringIO()
@@ -222,6 +222,7 @@ class MWCDB2Text(object):
 
     def convert_all(self):
         for key in self.reader:
+            key = key[:key.index(':')]
             try:
                 i = key.rindex('/')
                 pageid = int(key[:i])
