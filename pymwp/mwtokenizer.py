@@ -15,7 +15,7 @@ class Token(object):
         return
     
     def __repr__(self):
-        return ('<%s %s>' %
+        return ('<%s %r>' %
                 (self.__class__.__name__, self.name))
     
     def add_char(self, c):
@@ -232,9 +232,6 @@ class WikiTextTokenizer(object):
             self._handle_token(i, WikiToken.HR)
             self._scan = self._scan_bol_hr
             return i+1
-        elif c == u'{':
-            self._scan = self._scan_bol_brace
-            return i+1
         elif c == u'|':
             self._scan = self._scan_bol_bar
             return i+1
@@ -247,13 +244,20 @@ class WikiTextTokenizer(object):
             self._line_token = self._token
             self._scan = self._scan_bol_headline
             return i
-        elif c in u'*#:;':
-            self._token = WikiItemizeToken(pos=i)
-            self._line_token = self._token
-            self._scan = self._scan_bol_itemize
-            return i
         elif c.isspace():
             self._scan = self._scan_bol_sp
+            return i+1
+        else:
+            self._scan = self._scan_bol2
+            return i
+        
+    def _scan_bol2(self, i, c):
+        if c == u'{':
+            self._scan = self._scan_bol_brace
+            return i+1
+        elif c in u'*#:;':
+            token = WikiItemizeToken(name=c, pos=i)
+            self._handle_token(token.pos, token)
             return i+1
         else:
             self._scan = self._scan_main
@@ -282,15 +286,6 @@ class WikiTextTokenizer(object):
             return i+1
         else:
             self._scan = self._scan_main
-            return i
-        
-    def _scan_bol_brace(self, i, c):
-        if c == u'|':
-            self._handle_token(i-1, WikiToken.TABLE_OPEN)
-            self._scan = self._scan_main
-            return i+1
-        else:
-            self._scan = self._scan_brace_open
             return i
         
     def _scan_bol_bar(self, i, c):
@@ -322,17 +317,15 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i
 
-    def _scan_bol_itemize(self, i, c):
-        assert isinstance(self._token, WikiItemizeToken), self._token
-        if c in u'*#:;':
-            self._token.add_char(c)
+    def _scan_bol_brace(self, i, c):
+        if c == u'|':
+            self._handle_token(i-1, WikiToken.TABLE_OPEN)
+            self._scan = self._scan_bol2
             return i+1
         else:
-            self._handle_token(self._token.pos, self._token)
-            self._token = None
-            self._scan = self._scan_main
+            self._scan = self._scan_brace_open
             return i
-
+        
     def _scan_main(self, i, c):
         assert self._token is None, self._token
         if c == u'&':
