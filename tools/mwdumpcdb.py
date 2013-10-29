@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
-import re
 import sys
 from gzip import GzipFile
+from bz2 import BZ2File
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -19,10 +19,12 @@ class MWCDB2Dumper(object):
 
     def __iter__(self):
         for key in self.reader:
+            (id,_,type) = key.partition(':')
+            if type != 'text': continue
             try:
-                i = key.rindex('/')
-                pageid = int(key[:i])
-                revision = int(key[i+1:])
+                (pageid,_,revision) = id.partition('/')
+                pageid = int(pageid)
+                revision = int(revision)
             except ValueError:
                 continue
             yield self.get(pageid, revision)
@@ -33,7 +35,7 @@ class MWCDB2Dumper(object):
             title = self.reader['%d:title' % pageid].decode('utf-8')
         except KeyError:
             title = None
-        key = '%d/%d' % (pageid, revision)
+        key = '%d/%d:text' % (pageid, revision)
         buf = StringIO(self.reader[key])
         fp = GzipFile(mode='r', fileobj=buf)
         text = fp.read().decode('utf-8')

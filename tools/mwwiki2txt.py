@@ -16,7 +16,7 @@ from pymwp.mwparser import WikiTextParser
 from pymwp.mwparser import WikiTree, WikiXMLTree, WikiArgTree
 from pymwp.mwparser import WikiSpecialTree, WikiCommentTree
 from pymwp.mwparser import WikiKeywordTree, WikiLinkTree
-from pymwp.mwparser import WikiSpanTree, WikiDivTree
+from pymwp.mwparser import WikiDivTree
 from pymwp.mwparser import WikiTableTree, WikiTableCellTree
 from pymwp.mwxmldump import MWXMLDumpFilter
 from pymwp.pycdb import CDBReader, CDBMaker
@@ -162,7 +162,7 @@ class MWDump2Text(MWXMLDumpFilter):
     def __init__(self, factory,
                  outfp=sys.stdout, codec='utf-8', titleline=True,
                  titlepat=None, revisionlimit=1):
-        MWXMLDumpSplitter.__init__(
+        MWXMLDumpFilter.__init__(
             self,
             titlepat=titlepat, revisionlimit=revisionlimit)
         self.factory = factory
@@ -222,11 +222,12 @@ class MWCDB2Text(object):
 
     def convert_all(self):
         for key in self.reader:
-            key = key[:key.index(':')]
+            (id,_,type) = key.partition(':')
+            if type != 'text': continue
             try:
-                i = key.rindex('/')
-                pageid = int(key[:i])
-                revision = int(key[i+1:])
+                (pageid,_,revision) = id.partition('/')
+                pageid = int(pageid)
+                revision = int(revision)
             except ValueError:
                 continue
             print >>sys.stderr, (pageid,revision)
