@@ -240,10 +240,14 @@ class WikiTextTokenizer(object):
             self._scan = self._scan_main
             return i+1
         elif c == u'=':
-            self._token = WikiHeadlineToken(pos=i)
+            self._token = WikiHeadlineToken(name=c, pos=i)
             self._line_token = self._token
             self._scan = self._scan_bol_headline
-            return i
+            return i+1
+        elif c in u'*#:;':
+            self._token = WikiItemizeToken(name=c, pos=i)
+            self._scan = self._scan_bol_itemize
+            return i+1
         elif c.isspace():
             self._scan = self._scan_bol_sp
             return i+1
@@ -254,10 +258,6 @@ class WikiTextTokenizer(object):
     def _scan_bol2(self, i, c):
         if c == u'{':
             self._scan = self._scan_bol_brace
-            return i+1
-        elif c in u'*#:;':
-            token = WikiItemizeToken(name=c, pos=i)
-            self._handle_token(token.pos, token)
             return i+1
         else:
             self._scan = self._scan_main
@@ -309,6 +309,17 @@ class WikiTextTokenizer(object):
     def _scan_bol_headline(self, i, c):
         assert isinstance(self._token, WikiHeadlineToken), self._token
         if c == u'=':
+            self._token.add_char(c)
+            return i+1
+        else:
+            self._handle_token(self._token.pos, self._token)
+            self._token = None
+            self._scan = self._scan_main
+            return i
+
+    def _scan_bol_itemize(self, i, c):
+        assert isinstance(self._token, WikiItemizeToken), self._token
+        if c in u'*#:;':
             self._token.add_char(c)
             return i+1
         else:
