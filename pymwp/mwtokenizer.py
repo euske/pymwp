@@ -26,6 +26,7 @@ class Token(object):
 ##  WikiToken
 ##
 class WikiToken(Token): pass
+class ExtensionToken(Token): pass
 class WikiBOLToken(WikiToken): pass
 class WikiVarToken(WikiToken):
 
@@ -163,7 +164,7 @@ class WikiTextTokenizer(object):
 
     def __init__(self, codec='utf-8'):
         self._codec = codec
-        self._scan = self._scan_bol
+        self._scan = self._scan_bod
         self._wiki = True
         self._token = None
         self._entity = None
@@ -221,6 +222,25 @@ class WikiTextTokenizer(object):
         else:
             self._text += c
         return
+
+    def _scan_bod(self, i, c):
+        if c == u'#':
+            self._token = ExtensionToken(name=c)
+            self._scan = self._scan_extension
+            return i+1
+        else:
+            self._scan = self._scan_bol
+            return i
+
+    def _scan_extension(self, i, c):
+        if c.isspace():
+            self._handle_token(i, self._token)
+            self._token = None
+            self._scan = self._scan_main
+            return i+1
+        else:
+            self._token.add_char(c)
+            return i+1
 
     def _scan_bol(self, i, c):
         self._line_token = None

@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 import sys
 from mwtokenizer import WikiToken
+from mwtokenizer import ExtensionToken
 from mwtokenizer import WikiHeadlineToken
 from mwtokenizer import WikiItemizeToken
 from mwtokenizer import XMLTagToken
@@ -57,6 +58,13 @@ class WikiTree(object):
 class WikiPageTree(WikiTree): pass
 class WikiArgTree(WikiTree): pass
 
+class WikiExtensionTree(WikiTree):
+    def __init__(self, token):
+        WikiTree.__init__(self)
+        self.token = token
+        return
+    def __repr__(self):
+        return '<%s %r>' % (self.__class__.__name__, self.token)
 class WikiSpanTree(WikiTree):
     def __init__(self, token):
         WikiTree.__init__(self)
@@ -162,7 +170,10 @@ class WikiTextParser(WikiTextTokenizer):
                 (isinstance(t, XMLEndTagToken) and t.name in self._stoptokens))
 
     def _parse_top(self, pos, t):
-        if isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_TAG:
+        if isinstance(t, ExtensionToken):
+            self._push_context(WikiExtensionTree(t), self._parse_top)
+            return True
+        elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_TAG:
             self._push_context(WikiXMLTableTree(t), self._parse_xml_table,
                                t.name)
             return True
