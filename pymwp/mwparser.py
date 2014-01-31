@@ -110,14 +110,14 @@ class WikiHeadlineTree(WikiDivTree): pass
 ##
 class WikiTextParser(WikiTextTokenizer):
 
-    TABLE = (
+    TABLE = frozenset((
         WikiToken.TABLE_CAPTION,
         WikiToken.TABLE_ROW,
         WikiToken.TABLE_HEADER,
         WikiToken.TABLE_HEADER_SEP,
         WikiToken.TABLE_DATA,
         WikiToken.TABLE_DATA_SEP,
-        )
+        ))
 
     def __init__(self):
         WikiTextTokenizer.__init__(self)

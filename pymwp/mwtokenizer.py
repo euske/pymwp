@@ -69,18 +69,19 @@ WikiToken.PRE = WikiToken(u'PRE')
 ##
 class XMLTagToken(Token):
 
-    NO_WIKI = ('nowiki', 'source',)
-    NO_TEXT = ('ref', 'gallery',)
-    BR_TAG = ('br',)
-    PAR_TAG = (
+    NO_WIKI = frozenset(('nowiki', 'source',))
+    NO_TEXT = frozenset(('ref', 'gallery',))
+    BR_TAG = frozenset(('br',))
+    PAR_TAG = frozenset((
         'p','li','td','th','dt','dd',
         'h1','h2','h3','h4','h5','h6',
         'div','pre','blockquote','address','center',
-        )
-    TABLE_TAG = ('table',)
-    TABLE_ROW_TAG = ('tr',)
-    EMPTY_TAG = ('link', 'meta', 'img', 'br', 'hr',
-                 'input', 'option', 'area', 'embed')
+        ))
+    TABLE_TAG = frozenset(('table',))
+    TABLE_ROW_TAG = frozenset(('tr',))
+    EMPTY_TAG = frozenset((
+        'link', 'meta', 'img', 'br', 'hr',
+        'input', 'option', 'area', 'embed'))
     
     def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
