@@ -79,6 +79,8 @@ class XMLTagToken(Token):
         )
     TABLE_TAG = ('table',)
     TABLE_ROW_TAG = ('tr',)
+    EMPTY_TAG = ('link', 'meta', 'img', 'br', 'hr',
+                 'input', 'option', 'area', 'embed')
     
     def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
@@ -526,6 +528,10 @@ class WikiTextTokenizer(object):
     def _scan_starttag_mid(self, i, c):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c == u'>':
+            # Treat as an empty tag if it's one.
+            if self._token.name in XMLTagToken.EMPTY_TAG:
+                self._token = XMLEmptyTagToken(
+                    self._token.name, self._token.pos, self._token.attrs)
             self._handle_token(self._token.pos, self._token)
             self._token = None
             self._scan = self._scan_main
