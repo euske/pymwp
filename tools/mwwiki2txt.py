@@ -240,15 +240,15 @@ def main(argv):
     import getopt
     def getfp(path, mode='r'):
         if path == '-' and mode == 'r':
-            return sys.stdin
+            return (path, sys.stdin)
         elif path == '-' and mode == 'w':
-            return sys.stdout
+            return (path, sys.stdout)
         elif path.endswith('.gz'):
-            return GzipFile(path, mode=mode)
+            return (path[:-3], GzipFile(path, mode=mode))
         elif path.endswith('.bz2'):
-            return BZ2File(path, mode=mode)
+            return (path[:-4], BZ2File(path, mode=mode))
         else:
-            return open(path, mode=mode+'b')
+            return (path, open(path, mode=mode+'b'))
     def usage():
         print ('usage: %s [-X xmldump] [-C cdbdump] [-o output] [-c codec] [-T] [-L] '
                '[-e titlepat] [-r revisionlimit] [file ...]') % argv[0]
@@ -275,12 +275,12 @@ def main(argv):
         elif k == '-e': titlepat = re.compile(v)
         elif k == '-r': revisionlimit = int(v)
     if xmldump is not None:
-        outfp = getfp(output or '-', 'w')
+        (_,outfp) = getfp(output or '-', 'w')
         parser = MWDump2Text(
             factory, outfp=outfp,
             codec=codec, titleline=titleline,
             titlepat=titlepat, revisionlimit=revisionlimit)
-        fp = getfp(xmldump)
+        (_,fp) = getfp(xmldump)
         parser.feed_file(fp)
         fp.close()
         parser.close()
@@ -296,10 +296,10 @@ def main(argv):
             finally:
                 reader.close()
     else:
-        outfp = getfp(output or '-', 'w')
+        (output,outfp) = getfp(output or '-', 'w')
         for path in (args or ['-']):
             parser = factory(codec)
-            fp = getfp(path)
+            (_,fp) = getfp(path)
             parser.feed_file(fp)
             fp.close()
             parser.close()
