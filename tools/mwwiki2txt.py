@@ -33,10 +33,16 @@ def isignored(name): return IGNORED.match(name)
 ##
 class WikiTextExtractor(WikiTextParser):
 
-    def __init__(self, errfp=sys.stderr, codec='utf-8'):
+    def __init__(self, outfp, errfp=sys.stderr, codec='utf-8'):
         WikiTextParser.__init__(self)
+        self.outfp = outfp
         self.errfp = errfp
         self.codec = codec
+        return
+
+    def close(self):
+        self.convert(self.outfp)
+        WikiTextParser.close(self)
         return
 
     def error(self, s):
@@ -107,10 +113,16 @@ class WikiTextExtractor(WikiTextParser):
 ##
 class WikiLinkExtractor(WikiTextParser):
 
-    def __init__(self, errfp=sys.stderr, codec='utf-8'):
+    def __init__(self, outfp, errfp=sys.stderr, codec='utf-8'):
         WikiTextParser.__init__(self)
+        self.outfp = outfp
         self.errfp = errfp
         self.codec = codec
+        return
+
+    def close(self):
+        self.convert(self.outfp)
+        WikiTextParser.close(self)
         return
 
     def error(self, s):
@@ -159,33 +171,27 @@ class WikiLinkExtractor(WikiTextParser):
 ##
 class MWDump2Text(MWXMLDumpFilter):
 
-    def __init__(self, factory,
-                 outfp=sys.stdout, codec='utf-8', titleline=True,
-                 titlepat=None, revisionlimit=1):
-        MWXMLDumpFilter.__init__(
-            self,
-            titlepat=titlepat, revisionlimit=revisionlimit)
+    def __init__(self, factory, outfp, titleline=True):
+        MWXMLDumpFilter.__init__(self)
         self.factory = factory
-        self.codec = codec
         self.outfp = outfp
         self.titleline = titleline
         return
 
-    def open_file(self, pageid, title, revision):
-        print >>sys.stderr, (title,revision)
+    def open_file(self, pageid, title, revid, timestamp):
+        print >>sys.stderr, (pageid, title, revid)
         if self.titleline:
-            self.write(title+'\n')
-        self._textparser = self.factory(self.codec)
+            self.outfp.write(title+'\n')
+        self._textparser = self.factory(self.outfp)
         return self.outfp
-    
-    def write_file(self, fp, text):
-        self._textparser.feed_text(text)
-        return
     
     def close_file(self, fp):
         self._textparser.close()
-        self._textparser.convert(fp)
-        self.write('\f\n')
+        self.outfp.write('\f\n')
+        return
+    
+    def write_file(self, fp, text):
+        self._textparser.feed_text(text)
         return
 
 
@@ -209,10 +215,9 @@ class MWCDB2Text(object):
         src = GzipFile(mode='r', fileobj=srcbuf)
         dstbuf = StringIO()
         dst = GzipFile(mode='w', fileobj=dstbuf)
-        textparser = self.factory('utf-8')
-        textparser.feed_text(src.read().decode('utf-8'))
+        textparser = self.factory(dst)
+        textparser.feed_text(src.read().decode(textparser.codec))
         textparser.close()
-        textparser.convert(dst)
         src.close()
         dst.close()
         self.writer.add(key, dstbuf.getvalue())
@@ -250,41 +255,26 @@ def main(argv):
         else:
             return (path, open(path, mode=mode+'b'))
     def usage():
-        print ('usage: %s [-X xmldump] [-C cdbdump] [-o output] [-c codec] [-T] [-L] '
-               '[-e titlepat] [-r revisionlimit] [file ...]') % argv[0]
+        print ('usage: %s [-o output] [-c codec] [-C cdbdump] [-T] [-L] '
+               '[file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'X:C:o:c:TLe:r:')
+        (opts, args) = getopt.getopt(argv[1:], 'o:c:C:TL')
     except getopt.GetoptError:
         return usage()
-    xmldump = None
-    cdbdump = None
     output = None
     codec = 'utf-8'
-    titlepat = None
-    revisionlimit = 1
+    cdbdump = None
     titleline = False
-    factory = (lambda codec: WikiTextExtractor(codec=codec))
+    klass = WikiTextExtractor
     for (k, v) in opts:
-        if k == '-X': xmldump = v
-        elif k == '-C': cdbdump = v
-        elif k == '-o': output = v
+        if k == '-o': output = v
         elif k == '-c': codec = v 
+        elif k == '-C': cdbdump = v 
         elif k == '-T': titleline = True
-        elif k == '-L': factory = (lambda codec: WikiLinkExtractor(codec=codec))
-        elif k == '-e': titlepat = re.compile(v)
-        elif k == '-r': revisionlimit = int(v)
-    if xmldump is not None:
-        (_,outfp) = getfp(output or '-', 'w')
-        parser = MWDump2Text(
-            factory, outfp=outfp,
-            codec=codec, titleline=titleline,
-            titlepat=titlepat, revisionlimit=revisionlimit)
-        (_,fp) = getfp(xmldump)
-        parser.feed_file(fp)
-        fp.close()
-        parser.close()
-    elif cdbdump is not None:
+        elif k == '-L': klass = WikiLinkExtractor
+    factory = (lambda outfp: klass(outfp, codec=codec))
+    if cdbdump is not None:
         if not output: return usage()
         reader = MWCDB2Text(cdbdump, output, factory)
         if args:
@@ -296,14 +286,16 @@ def main(argv):
             finally:
                 reader.close()
     else:
-        (output,outfp) = getfp(output or '-', 'w')
+        (_,outfp) = getfp(output or '-', 'w')
         for path in (args or ['-']):
-            parser = factory(codec)
-            (_,fp) = getfp(path)
+            (path,fp) = getfp(path)
+            if path.endswith('.xml'):
+                parser = MWDump2Text(factory, outfp, titleline=titleline)
+            else:
+                parser = factory(outfp)
             parser.feed_file(fp)
             fp.close()
             parser.close()
-            parser.convert(outfp)
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
