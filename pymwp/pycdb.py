@@ -157,6 +157,7 @@ class CDBMaker(object):
     self.numentries = 0
     self._fp = file(self.fntmp, 'wb')
     self._pos = 2048                    # sizeof((h,p))*256
+    self._size = 2048
     self._bucket = [ array('I') for _ in xrange(256) ]
     return
 
@@ -168,6 +169,9 @@ class CDBMaker(object):
 
   def __setstate__(self, dict):
     raise TypeError
+
+  def get_size(self):
+    return self._size
 
   def add(self, k, v):
     (k, v) = (str(k), str(v))
@@ -181,7 +185,9 @@ class CDBMaker(object):
     b.append(h)
     b.append(self._pos)
     # sizeof(keylen)+sizeof(datalen)+sizeof(key)+sizeof(data)
-    self._pos += 8+klen+vlen
+    size = 8+klen+vlen
+    self._pos += size
+    self._size += size+16 # bucket
     self.numentries += 1
     return self
   
@@ -201,6 +207,7 @@ class CDBMaker(object):
         a[i] = h
         a[i+1] = p
       self._fp.write(encode(a))
+    assert self._fp.tell() == self._size
     # write header
     self._fp.seek(0)
     a = array('I')
