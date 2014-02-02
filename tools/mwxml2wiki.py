@@ -57,19 +57,28 @@ class MWXMLDump2File(MWXMLDumpFilter):
 ##
 class MWXMLDump2CDB(MWXMLDumpFilter):
 
-    def __init__(self, path):
+    def __init__(self, template, maxsize=2**31):
         MWXMLDumpFilter.__init__(self)
-        self._maker = CDBMaker(path)
+        self.template = template
+        self.maxsize = maxsize
+        self._index = 0
+        self._maker = None
         self._key = self._value = None
         return
 
     def close(self):
         MWXMLDumpFilter.close(self)
-        self._maker.finish()
+        if self._maker is not None:
+            self._maker.finish()
+            self._maker = None
         return
 
     def start_page(self, pageid, title):
         MWXMLDumpFilter.start_page(self, pageid, title)
+        if self._maker is None:
+            path = (self.template % {'index':self._index})
+            self._maker = CDBMaker(path)
+            self._index += 1
         self._maker.add('%s:title' % pageid, title.encode('utf-8'))
         self._revs = []
         return
@@ -83,6 +92,9 @@ class MWXMLDump2CDB(MWXMLDumpFilter):
         MWXMLDumpFilter.end_page(self, pageid, title)
         revs = ' '.join( str(revid) for revid in self._revs )
         self._maker.add('%s:revs' % pageid, revs)
+        if self.maxsize <= self._maker.get_size():
+            self._maker.finish()
+            self._maker = None
         return
     
     def open_file(self, pageid, title, revid, timestamp):
