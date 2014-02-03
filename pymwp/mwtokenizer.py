@@ -79,9 +79,20 @@ class XMLTagToken(Token):
         ))
     TABLE_TAG = frozenset(('table',))
     TABLE_ROW_TAG = frozenset(('tr',))
-    EMPTY_TAG = frozenset((
-        'link', 'meta', 'img', 'br', 'hr',
-        'input', 'option', 'area', 'embed'))
+
+    # cf. https://meta.wikimedia.org/wiki/Help:HTML_in_wikitext
+    NESTED_TAG = frozenset((
+        'nowiki', 'source', 'ref', 'gallery',
+        'abbr', 'address', 'b', 'bdi', 'big',
+        'blockquote', 'caption', 'center', 'cite',
+        'code', 'dd', 'del', 'dfn', 'div',
+        'dl', 'dt', 'em', 'font',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'i', 'ins', 'kbd', 'li', 'ol',
+        'p', 'pre', 'rb', 'rp', 'rt', 'ruby',
+        's', 'samp', 'small', 'span', 'strike',
+        'strong', 'sub', 'sup', 'table',
+        'td', 'th', 'tr', 'tt', 'u', 'ul', 'var'))
     
     def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
@@ -530,7 +541,7 @@ class WikiTextTokenizer(object):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c == u'>':
             # Treat as an empty tag if it's one.
-            if self._token.name in XMLTagToken.EMPTY_TAG:
+            if self._token.name not in XMLTagToken.NESTED_TAG:
                 self._token = XMLEmptyTagToken(
                     self._token.name, self._token.pos, self._token.attrs)
             self._handle_token(self._token.pos, self._token)
