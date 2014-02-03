@@ -221,22 +221,22 @@ class MWCDB2Text(object):
         src.close()
         dst.close()
         self.writer.add(key, dstbuf.getvalue())
-        key = '%d:title' % pageid
-        self.writer.add(key, self.reader[key])
         return
 
     def convert_all(self):
         for key in self.reader:
             (id,_,type) = key.partition(':')
-            if type != 'text': continue
-            try:
-                (pageid,_,revision) = id.partition('/')
-                pageid = int(pageid)
-                revision = int(revision)
-            except ValueError:
-                continue
-            print >>sys.stderr, (pageid,revision)
-            self.convert(pageid, revision)
+            if type == 'text':
+                try:
+                    (pageid,_,revision) = id.partition('/')
+                    pageid = int(pageid)
+                    revision = int(revision)
+                except ValueError:
+                    continue
+                print >>sys.stderr, (pageid,revision)
+                self.convert(pageid, revision)
+            else:
+                self.writer.add(key, self.reader[key])
         return
 
 
