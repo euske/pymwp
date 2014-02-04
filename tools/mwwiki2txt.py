@@ -54,58 +54,61 @@ class WikiTextExtractor(WikiTextParser):
             self.error('invalid token(%d): %r\n' % (pos, token))
         return
 
-    def convert(self, fp, tree=None):
-        if tree is None:
-            self.convert(fp, self.get_root())
-        elif tree is WikiToken.PAR:
-            fp.write('\n')
-        elif isinstance(tree, XMLEmptyTagToken):
-            if tree.name in XMLTagToken.BR_TAG:
+    def convert(self, fp):
+        stack = [self.get_root()]
+        while stack:
+            tree = stack.pop()
+            if isinstance(tree, str):
+                fp.write(tree)
+            elif tree is WikiToken.PAR:
                 fp.write('\n')
-        elif isinstance(tree, unicode):
-            fp.write(rmsp(tree).encode(self.codec, 'ignore'))
-        elif isinstance(tree, WikiSpecialTree):
-            pass
-        elif isinstance(tree, WikiCommentTree):
-            pass
-        elif isinstance(tree, WikiXMLTree):
-            if tree.xml.name in XMLTagToken.NO_TEXT:
-                pass
-            else:
-                for c in tree:
-                    self.convert(fp, c)
-                if tree.xml.name in XMLTagToken.PAR_TAG:
+            elif isinstance(tree, XMLEmptyTagToken):
+                if tree.name in XMLTagToken.BR_TAG:
                     fp.write('\n')
-        elif isinstance(tree, WikiKeywordTree):
-            if tree:
-                if isinstance(tree[0], WikiTree):
-                    name = tree[0].get_text()
+            elif isinstance(tree, unicode):
+                fp.write(rmsp(tree).encode(self.codec, 'ignore'))
+            elif isinstance(tree, WikiSpecialTree):
+                pass
+            elif isinstance(tree, WikiCommentTree):
+                pass
+            elif isinstance(tree, WikiXMLTree):
+                if tree.xml.name in XMLTagToken.NO_TEXT:
+                    pass
                 else:
-                    name = tree[0]
-                if isinstance(name, unicode) and not isignored(name):
-                    self.convert(fp, tree[-1])
-        elif isinstance(tree, WikiLinkTree):
-            if 2 <= len(tree):
-                for c in tree[1:]:
-                    self.convert(fp, c)
-                    fp.write(' ')
-            elif tree:
-                self.convert(fp, tree[0])
-        elif isinstance(tree, WikiTableCellTree):
-            if tree:
-                self.convert(fp, tree[-1])
-                fp.write('\n')
-        elif isinstance(tree, WikiTableTree):
-            for c in tree:
-                if not isinstance(c, WikiArgTree):
-                    self.convert(fp, c)
-        elif isinstance(tree, WikiDivTree):
-            for c in tree:
-                self.convert(fp, c)
-            fp.write('\n')
-        elif isinstance(tree, WikiTree):
-            for c in tree:
-                self.convert(fp, c)
+                    if tree.xml.name in XMLTagToken.PAR_TAG:
+                        stack.append('\n')
+                    for c in reversed(tree):
+                        stack.append(c)
+            elif isinstance(tree, WikiKeywordTree):
+                if tree:
+                    if isinstance(tree[0], WikiTree):
+                        name = tree[0].get_text()
+                    else:
+                        name = tree[0]
+                    if isinstance(name, unicode) and not isignored(name):
+                        stack.append(tree[-1])
+            elif isinstance(tree, WikiLinkTree):
+                if 2 <= len(tree):
+                    for c in reversed(tree[1:]):
+                        stack.append(' ')
+                        stack.append(c)
+                elif tree:
+                    stack.append(tree[0])
+            elif isinstance(tree, WikiTableCellTree):
+                if tree:
+                    stack.append('\n')
+                    stack.append(tree[-1])
+            elif isinstance(tree, WikiTableTree):
+                for c in reversed(tree):
+                    if not isinstance(c, WikiArgTree):
+                        stack.append(c)
+            elif isinstance(tree, WikiDivTree):
+                stack.append('\n')
+                for c in reversed(tree):
+                    stack.append(c)
+            elif isinstance(tree, WikiTree):
+                for c in reversed(tree):
+                    stack.append(c)
         return
 
 
@@ -134,36 +137,39 @@ class WikiLinkExtractor(WikiTextParser):
             self.error('invalid token(%d): %r\n' % (pos, token))
         return
 
-    def convert(self, fp, tree=None):
-        if tree is None:
-            self.convert(fp, self.get_root())
-        elif isinstance(tree, WikiKeywordTree):
-            if tree:
-                if isinstance(tree[0], WikiTree):
-                    name = tree[0].get_text()
-                else:
-                    name = tree[0]
-                if isinstance(name, unicode):
-                    fp.write('keyword\t'+name.encode(self.codec, 'ignore'))
-                    if 2 <= len(tree) and not isignored(name):
-                        text = tree[-1].get_text()
-                        fp.write('\t'+text.encode(self.codec, 'ignore'))
-                    fp.write('\n')
-        elif isinstance(tree, WikiLinkTree):
-            if tree:
-                if isinstance(tree[0], WikiTree):
-                    url = tree[0].get_text()
-                else:
-                    url = tree[0]
-                if isinstance(url, unicode):
-                    fp.write('link\t'+url.encode(self.codec, 'ignore'))
-                    if 2 <= len(tree):
-                        text = tree[-1].get_text()
-                        fp.write('\t'+text.encode(self.codec, 'ignore'))
-                    fp.write('\n')
-        elif isinstance(tree, WikiTree):
-            for c in tree:
-                self.convert(fp, c)
+    def convert(self, fp):
+        stack = [self.get_root()]
+        while stack:
+            tree = stack.pop()
+            if isinstance(tree, str):
+                fp.write(tree)
+            elif isinstance(tree, WikiKeywordTree):
+                if tree:
+                    if isinstance(tree[0], WikiTree):
+                        name = tree[0].get_text()
+                    else:
+                        name = tree[0]
+                    if isinstance(name, unicode):
+                        fp.write('keyword\t'+name.encode(self.codec, 'ignore'))
+                        if 2 <= len(tree) and not isignored(name):
+                            text = tree[-1].get_text()
+                            fp.write('\t'+text.encode(self.codec, 'ignore'))
+                        fp.write('\n')
+            elif isinstance(tree, WikiLinkTree):
+                if tree:
+                    if isinstance(tree[0], WikiTree):
+                        url = tree[0].get_text()
+                    else:
+                        url = tree[0]
+                    if isinstance(url, unicode):
+                        fp.write('link\t'+url.encode(self.codec, 'ignore'))
+                        if 2 <= len(tree):
+                            text = tree[-1].get_text()
+                            fp.write('\t'+text.encode(self.codec, 'ignore'))
+                        fp.write('\n')
+            elif isinstance(tree, WikiTree):
+                for c in reversed(tree):
+                    stack.append(c)
         return
 
 
