@@ -123,7 +123,7 @@ class WikiTextParser(WikiTextTokenizer):
         WikiTextTokenizer.__init__(self)
         self._root = WikiPageTree()
         self._stack = [(self._root, self._parse_top, set())]
-        (self._tree, self._parse, self._stoptokens) = self._stack.pop()
+        (self._tree, self._parse, self._stoptokens) = self._stack[-1]
         return
 
     def get_root(self):
@@ -151,18 +151,19 @@ class WikiTextParser(WikiTextTokenizer):
 
     def _push_context(self, tree, parse, stoptoken=None):
         self._tree.append(tree)
-        self._stack.append((self._tree, self._parse, self._stoptokens))
         self._tree = tree
         self._parse = parse
         if stoptoken is not None:
             self._stoptokens = self._stoptokens.copy()
             self._stoptokens.add(stoptoken)
+        self._stack.append((self._tree, self._parse, self._stoptokens))
         return
 
     def _pop_context(self):
         assert self._stack
         self._tree.finish()
-        (self._tree, self._parse, self._stoptokens) = self._stack.pop()
+        self._stack.pop()
+        (self._tree, self._parse, self._stoptokens) = self._stack[-1]
         return
 
     def _is_closing(self, t):
