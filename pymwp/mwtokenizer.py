@@ -69,30 +69,27 @@ WikiToken.PRE = WikiToken(u'PRE')
 ##
 class XMLTagToken(Token):
 
-    NO_WIKI = frozenset(('nowiki', 'source',))
-    NO_TEXT = frozenset(('ref', 'gallery',))
-    BR_TAG = frozenset(('br',))
-    PAR_TAG = frozenset((
-        'p','li','td','th','dt','dd',
-        'h1','h2','h3','h4','h5','h6',
-        'div','pre','blockquote','address','center',
-        ))
-    TABLE_TAG = frozenset(('table',))
-    TABLE_ROW_TAG = frozenset(('tr',))
+    def TAGS(x): return frozenset(x.split(u' '))
 
+    NO_WIKI = TAGS(u'nowiki source')
+    NO_TEXT = TAGS(u'ref gallery')
+    BR_TAG = TAGS(u'br')
+    PAR_TAG = TAGS(u'p li td th dt dd h1 h2 h3 h4 h5 h6 '
+                   u'div pre blockquote address center')
+    TABLE_TAG = TAGS(u'table')
+    TABLE_ROW_TAG = TAGS(u'tr')
+    
     # cf. https://meta.wikimedia.org/wiki/Help:HTML_in_wikitext
-    NESTED_TAG = frozenset((
-        'nowiki', 'source', 'ref', 'gallery',
-        'abbr', 'address', 'b', 'bdi', 'big',
-        'blockquote', 'caption', 'center', 'cite',
-        'code', 'dd', 'del', 'dfn', 'div',
-        'dl', 'dt', 'em', 'font',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'i', 'ins', 'kbd', 'li', 'ol',
-        'p', 'pre', 'rb', 'rp', 'rt', 'ruby',
-        's', 'samp', 'small', 'span', 'strike',
-        'strong', 'sub', 'sup', 'table',
-        'td', 'th', 'tr', 'tt', 'u', 'ul', 'var'))
+    NESTED_TAG = TAGS(
+        u'nowiki source ref gallery '
+        u'abbr address b bdi big '
+        u'blockquote caption center cite '
+        u'code dd del dfn div dl dt em '
+        u'font h1 h2 h3 h4 h5 h6 '
+        u'i ins kbd li ol p pre '
+        u'rb rp rt ruby s samp small '
+        u'span strike strong sub sup table '
+        u'td th tr tt u ul var')
     
     def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
