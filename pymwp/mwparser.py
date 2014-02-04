@@ -223,8 +223,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         elif t in (
             WikiToken.HR,
-            WikiToken.PAR,
-            WikiToken.PRE):
+            WikiToken.PAR):
             self._tree.append(t)
             return True
         elif isinstance(t, XMLTagToken):
