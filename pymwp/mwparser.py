@@ -10,6 +10,12 @@ from mwtokenizer import XMLEndTagToken
 from mwtokenizer import WikiTextTokenizer
 
 
+##  WikiParserError
+##
+class WikiParserError(ValueError): pass
+class WikiParserStackOverflow(WikiParserError): pass
+
+
 ##  WikiTree
 ##
 class WikiTree(object):
@@ -119,8 +125,9 @@ class WikiTextParser(WikiTextTokenizer):
         WikiToken.TABLE_DATA_SEP,
         ))
 
-    def __init__(self):
+    def __init__(self, maxdepth=100):
         WikiTextTokenizer.__init__(self)
+        self.maxdepth = maxdepth
         self._root = WikiPageTree()
         self._stack = [(self._root, self._parse_top, set())]
         (self._tree, self._parse, self._stoptokens) = self._stack[-1]
@@ -150,6 +157,7 @@ class WikiTextParser(WikiTextTokenizer):
         return
 
     def _push_context(self, tree, parse, *stoptokens):
+        if self.maxdepth <= len(self._stack): raise WikiParserStackOverflow
         self._tree.append(tree)
         self._tree = tree
         self._parse = parse

@@ -18,6 +18,7 @@ from pymwp.mwparser import WikiSpecialTree, WikiCommentTree
 from pymwp.mwparser import WikiKeywordTree, WikiLinkTree
 from pymwp.mwparser import WikiDivTree
 from pymwp.mwparser import WikiTableTree, WikiTableCellTree
+from pymwp.mwparser import WikiParserError
 from pymwp.mwxmldump import MWXMLDumpFilter
 from pymwp.pycdb import CDBReader, CDBMaker
 
@@ -233,8 +234,11 @@ class MWCDB2Text(object):
                     revision = int(revision)
                 except ValueError:
                     continue
-                print >>sys.stderr, (pageid,revision)
-                self.convert(pageid, revision)
+                try:
+                    self.convert(pageid, revision)
+                except WikiParserError:
+                    continue
+                print >>sys.stderr, (pageid, revision)
             else:
                 self.writer.add(key, self.reader[key])
         return
