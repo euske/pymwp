@@ -17,6 +17,13 @@ class Token(object):
     def __repr__(self):
         return ('<%s %r>' %
                 (self.__class__.__name__, self.name))
+
+    def __hash__(self):
+        return hash((self.__class__, self.name))
+
+    def __eq__(self, t):
+        return (self.__class__ is t.__class__ and
+                self.name == t.name)
     
     def add_char(self, c):
         self.name += c
@@ -147,7 +154,6 @@ class XMLStartTagToken(XMLTagToken):
 
 class XMLEndTagToken(XMLTagToken): pass
 class XMLEmptyTagToken(XMLTagToken): pass
-
 
     
 ##  WikiTextTokenizer

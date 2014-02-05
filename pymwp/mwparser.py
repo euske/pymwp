@@ -139,7 +139,7 @@ class WikiTextParser(WikiTextTokenizer):
 
     def feed_token(self, pos, token):
         while 1:
-            #print self._parse, token
+            #print token, self._parse, self._stoptokens
             if self._parse(pos, token): break
         return
 
@@ -177,7 +177,7 @@ class WikiTextParser(WikiTextTokenizer):
 
     def _is_closing(self, t):
         return ((isinstance(t, WikiToken) and t in self._stoptokens) or
-                (isinstance(t, XMLEndTagToken) and t.name in self._stoptokens))
+                (isinstance(t, XMLTagToken) and t in self._stoptokens))
 
     def _parse_top(self, pos, t):
         if isinstance(t, ExtensionToken):
@@ -185,15 +185,15 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.TABLE_TAG:
             self._push_context(WikiXMLTableTree(t), self._parse_xml_table,
-                               t.name)
+                               XMLEndTagToken(t.name))
             return True
         elif isinstance(t, XMLStartTagToken) and t.name in XMLTagToken.PAR_TAG:
             self._push_context(WikiXMLParTree(t), self._parse_xml_par,
-                               t.name)
+                               XMLStartTagToken(t.name))
             return True
         elif isinstance(t, XMLStartTagToken):
             self._push_context(WikiXMLTree(t), self._parse_xml,
-                               t.name)
+                               XMLEndTagToken(t.name))
             return True
         elif isinstance(t, WikiItemizeToken):
             self._push_context(WikiItemizeTree(t), self._parse_itemize)
