@@ -149,13 +149,13 @@ class WikiTextParser(WikiTextTokenizer):
         print >>sys.stderr, (self._parse, pos, token)
         return
 
-    def _push_context(self, tree, parse, stoptoken=None):
+    def _push_context(self, tree, parse, *stoptokens):
         self._tree.append(tree)
         self._tree = tree
         self._parse = parse
-        if stoptoken is not None:
+        if stoptokens:
             self._stoptokens = self._stoptokens.copy()
-            self._stoptokens.add(stoptoken)
+            self._stoptokens.update(stoptokens)
         self._stack.append((self._tree, self._parse, self._stoptokens))
         return
 
@@ -213,7 +213,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         elif t is WikiToken.LINK_OPEN:
             self._push_context(WikiLinkTree(t), self._parse_link,
-                               WikiToken.LINK_CLOSE)                               
+                               WikiToken.LINK_CLOSE)
             return True
         elif t in (
             WikiToken.QUOTE2,
