@@ -128,9 +128,10 @@ class WikiTextParser(WikiTextTokenizer):
     def __init__(self, maxdepth=100):
         WikiTextTokenizer.__init__(self)
         self.maxdepth = maxdepth
-        self._root = WikiPageTree()
-        self._stack = [(self._root, self._parse_top, set())]
-        (self._tree, self._parse, self._stoptokens) = self._stack[-1]
+        self._tree = self._root = WikiPageTree()
+        self._parse = self._parse_top
+        self._stoptokens = set()
+        self._stack = [(self._tree, self._parse, self._stoptokens)]
         return
 
     def get_root(self):
