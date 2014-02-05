@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import sys
 from mwtokenizer import WikiToken
 from mwtokenizer import ExtensionToken

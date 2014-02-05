@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # usage:
 #  $ mwdump2wiki.py -n10 -t 'article%(pageid)08d.txt' jawiki.xml.bz2

@@ -1,2 +1,2 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 __version__ = '20110123'

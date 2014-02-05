@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import sys
 from gzip import GzipFile
 from bz2 import BZ2File

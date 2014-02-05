@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 from distutils.core import setup
 from pymwp import __version__
 
@@ -13,13 +13,13 @@ from Wikipedia articles.''',
     license='MIT/X',
     author='Yusuke Shinyama',
     author_email='yusuke at cs dot nyu dot edu',
-    url='http://www.unixuser.org/~euske/python/pymwp/index.html',
+    url='https://github.com/euske/pymwp',
     packages=[
     'pymwp',
     ],
     scripts=[
     'tools/mwdumpcdb.py',
-    'tools/mwdump2wiki.py',
+    'tools/mwxml2wiki.py',
     'tools/mwwiki2txt.py',
     ],
     keywords=['mediawiki parser', 'text mining'],
