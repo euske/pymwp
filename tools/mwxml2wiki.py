@@ -99,7 +99,7 @@ class MWXMLDump2CDB(MWXMLDumpFilter):
     
     def open_file(self, pageid, title, revid, timestamp):
         print >>sys.stderr, (pageid, title, revid)
-        self._key = '%s/%s:text' % (pageid, revid)
+        self._key = '%s/%s:wiki' % (pageid, revid)
         self._value = StringIO()
         return GzipFile(mode='w', fileobj=self._value)
 

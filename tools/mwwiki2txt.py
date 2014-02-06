@@ -210,9 +210,8 @@ class MWCDB2Text(object):
         self.writer.finish()
         return
 
-    def convert(self, pageid, revision=0):
-        key = '%d/%d:text' % (pageid, revision)
-        srcbuf = StringIO(self.reader[key])
+    def convert1(self, data):
+        srcbuf = StringIO(data)
         src = GzipFile(mode='r', fileobj=srcbuf)
         dstbuf = StringIO()
         dst = GzipFile(mode='w', fileobj=dstbuf)
@@ -221,24 +220,19 @@ class MWCDB2Text(object):
         textparser.close()
         src.close()
         dst.close()
-        self.writer.add(key, dstbuf.getvalue())
-        return
+        return dstbuf.getvalue()
 
     def convert_all(self):
         for key in self.reader:
-            (id,_,type) = key.partition(':')
-            if type == 'text':
+            (k,_,t) = key.partition(':')
+            if t == 'wiki':
+                data = self.reader[key]
                 try:
-                    (pageid,_,revision) = id.partition('/')
-                    pageid = int(pageid)
-                    revision = int(revision)
-                except ValueError:
-                    continue
-                try:
-                    self.convert(pageid, revision)
+                    data = self.convert1(data)
                 except WikiParserError:
                     continue
-                print >>sys.stderr, (pageid, revision)
+                self.writer.add(k+':text', data)
+                print >>sys.stderr, 'Convert:', key
             else:
                 self.writer.add(key, self.reader[key])
         return
