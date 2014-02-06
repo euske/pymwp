@@ -146,7 +146,7 @@ class WikiTextParser(WikiTextTokenizer):
 
     def feed_token(self, pos, token):
         while 1:
-            #print token, self._parse, self._stoptokens
+            #print (token, self._parse, self._stoptokens)
             if self._parse(pos, token): break
         return
 
@@ -204,38 +204,28 @@ class WikiTextParser(WikiTextTokenizer):
             self._push_context(WikiXMLTree(t), self._parse_xml)
             return True
         elif isinstance(t, WikiItemizeToken):
-            self._push_context(WikiItemizeTree(t), self._parse_itemize,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiItemizeTree(t), self._parse_itemize)
             return True
         elif isinstance(t, WikiHeadlineToken):
-            self._push_context(WikiHeadlineTree(t), self._parse_headline,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiHeadlineTree(t), self._parse_headline)
             return True
         elif t is WikiToken.PRE:
             self._push_context(WikiPreTree(t), self._parse_pre)
             return True
         elif t is WikiToken.TABLE_OPEN:
-            self._push_context(WikiTableTree(t), self._parse_table,
-                               stoptokens=(WikiToken.TABLE_CLOSE,),
-                               newcontext=True)
+            self._push_context(WikiTableTree(t), self._parse_table)
             return True
         elif t is WikiToken.COMMENT_OPEN:
-            self._push_context(WikiCommentTree(t), self._parse_comment,
-                               stoptokens=(WikiToken.COMMENT_CLOSE,))
+            self._push_context(WikiCommentTree(t), self._parse_comment)
             return True
         elif t is WikiToken.SPECIAL_OPEN:
-            self._push_context(WikiSpecialTree(t), self._parse_special,
-                               stoptokens=(WikiToken.SPECIAL_CLOSE,))
+            self._push_context(WikiSpecialTree(t), self._parse_special)
             return True
         elif t is WikiToken.KEYWORD_OPEN:
-            self._push_context(WikiKeywordTree(t), self._parse_keyword,
-                               stoptokens=(WikiToken.KEYWORD_OPEN,
-                                           WikiToken.KEYWORD_CLOSE))
+            self._push_context(WikiKeywordTree(t), self._parse_keyword)
             return True
         elif t is WikiToken.LINK_OPEN:
-            self._push_context(WikiLinkTree(t), self._parse_link,
-                               stoptokens=(WikiToken.LINK_OPEN,
-                                           WikiToken.LINK_CLOSE))
+            self._push_context(WikiLinkTree(t), self._parse_link)
             return True
         elif t in (
             WikiToken.QUOTE2,
@@ -340,7 +330,7 @@ class WikiTextParser(WikiTextTokenizer):
             return False
         else:
             self._push_context(WikiArgTree(), self._parse_arg_barsep,
-                               stoptokens=(WikiToken.BAR,))
+                               stoptokens=(WikiToken.SPECIAL_CLOSE,))
             return False
 
     def _parse_keyword(self, pos, t):
@@ -353,7 +343,7 @@ class WikiTextParser(WikiTextTokenizer):
             return False
         else:
             self._push_context(WikiArgTree(), self._parse_arg_barsep,
-                               stoptokens=(WikiToken.BAR,))
+                               stoptokens=(WikiToken.KEYWORD_CLOSE,))
             return False
         
     def _parse_link(self, pos, t):
@@ -366,7 +356,7 @@ class WikiTextParser(WikiTextTokenizer):
             return False
         else:
             self._push_context(WikiArgTree(), self._parse_arg_spcsep,
-                               stoptokens=(WikiToken.BLANK,))
+                               stoptokens=(WikiToken.LINK_CLOSE,))
             return False
     
     def _parse_arg_barsep(self, pos, t):
@@ -443,23 +433,19 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return True
         elif t is WikiToken.TABLE_CAPTION:
-            self._push_context(WikiTableCaptionTree(t), self._parse_table_caption,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiTableCaptionTree(t), self._parse_table_caption)
             return True
         elif t is WikiToken.TABLE_ROW:
-            self._push_context(WikiTableRowTree(t), self._parse_table_row,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return True
         elif t in self.TABLE:
-            self._push_context(WikiTableRowTree(t), self._parse_table_row,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiTableRowTree(t), self._parse_table_row)
             return False
         elif self._is_closing(t):
             self._pop_context()
             return False
         else:
-            self._push_context(WikiArgTree(), self._parse_table_arg,
-                               stoptokens=(WikiToken.BAR,))
+            self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
         
     def _parse_table_caption(self, pos, t):
@@ -474,8 +460,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return False
         else:
-            self._push_context(WikiArgTree(), self._parse_table_arg,
-                               stoptokens=(WikiToken.BAR,))
+            self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
         
     def _parse_table_row(self, pos, t):
@@ -486,14 +471,12 @@ class WikiTextParser(WikiTextTokenizer):
         elif t in (
             WikiToken.TABLE_HEADER,
             WikiToken.TABLE_HEADER_SEP):
-            self._push_context(WikiTableHeaderTree(t), self._parse_table_header,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiTableHeaderTree(t), self._parse_table_header)
             return True
         elif t in (
             WikiToken.TABLE_DATA,
             WikiToken.TABLE_DATA_SEP):
-            self._push_context(WikiTableDataTree(t), self._parse_table_data,
-                               stoptokens=(WikiToken.EOL,))
+            self._push_context(WikiTableDataTree(t), self._parse_table_data)
             return True
         elif t in self.TABLE:
             self._pop_context()
@@ -502,8 +485,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return False
         else:
-            self._push_context(WikiArgTree(), self._parse_table_arg,
-                               stoptokens=(WikiToken.BAR,))
+            self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
         
     def _parse_table_header(self, pos, t):
@@ -518,8 +500,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()            
             return False
         else:
-            self._push_context(WikiArgTree(), self._parse_table_arg,
-                               stoptokens=(WikiToken.BAR,))
+            self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
 
     def _parse_table_data(self, pos, t):
@@ -534,8 +515,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()            
             return False
         else:
-            self._push_context(WikiArgTree(), self._parse_table_arg,
-                               stoptokens=(WikiToken.BAR,))
+            self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
 
     def _parse_table_arg(self, pos, t):

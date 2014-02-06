@@ -362,7 +362,7 @@ class WikiTextTokenizer(object):
         else:
             self._handle_token(self._token.pos, self._token)
             self._token = None
-            self._scan = self._scan_main
+            self._scan = self._scan_bol2
             return i
 
     def _scan_bol_brace(self, i, c):
