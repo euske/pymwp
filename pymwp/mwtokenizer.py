@@ -18,13 +18,6 @@ class Token(object):
         return ('<%s %r>' %
                 (self.__class__.__name__, self.name))
 
-    def __hash__(self):
-        return hash((self.__class__, self.name))
-
-    def __eq__(self, t):
-        return (self.__class__ is t.__class__ and
-                self.name == t.name)
-    
     def add_char(self, c):
         self.name += c
         return
@@ -78,16 +71,9 @@ class XMLTagToken(Token):
 
     def TAGS(x): return frozenset(x.split(u' '))
 
-    NO_WIKI = TAGS(u'nowiki source')
-    NO_TEXT = TAGS(u'ref gallery')
-    BR_TAG = TAGS(u'br')
-    PAR_TAG = TAGS(u'p li td th dt dd h1 h2 h3 h4 h5 h6 '
-                   u'div pre blockquote address center')
-    TABLE_TAG = TAGS(u'table')
-    TABLE_ROW_TAG = TAGS(u'tr')
-    
+    # Used by tokenizer.
     # cf. https://meta.wikimedia.org/wiki/Help:HTML_in_wikitext
-    NESTED_TAG = TAGS(
+    VALID_TAG = TAGS(
         u'nowiki source ref gallery math '
         u'abbr address b bdi big '
         u'blockquote caption center cite '
@@ -97,7 +83,20 @@ class XMLTagToken(Token):
         u'rb rp rt ruby s samp small '
         u'span strike strong sub sup table '
         u'td th tr tt u ul var')
+
+    # Used by parser.
+    PAR_TAG = TAGS(
+        u'p li dd dt h1 h2 h3 h4 h5 h6 '
+        u'div pre blockquote address center '
+        u'td th')
+    TABLE_TAG = TAGS(u'table')
+    TABLE_ROW_TAG = TAGS(u'tr')
     
+    # Used by wiki2txt.
+    NO_WIKI = TAGS(u'nowiki source')
+    NO_TEXT = TAGS(u'ref gallery')
+    BR_TAG = TAGS(u'br')
+
     def __init__(self, name='', pos=0, attr=None):
         Token.__init__(self, name)
         self.pos = pos
@@ -544,7 +543,7 @@ class WikiTextTokenizer(object):
         assert isinstance(self._token, XMLStartTagToken), self._token
         if c == u'>':
             # Treat as an empty tag if it's one.
-            if self._token.name not in XMLTagToken.NESTED_TAG:
+            if self._token.name not in XMLTagToken.VALID_TAG:
                 self._token = XMLEmptyTagToken(
                     self._token.name, self._token.pos, self._token.attrs)
             self._handle_token(self._token.pos, self._token)
