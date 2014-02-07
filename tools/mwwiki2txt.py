@@ -65,6 +65,8 @@ class WikiTextExtractor(WikiTextParser):
                 fp.write('\n')
         elif isinstance(tree, unicode):
             fp.write(rmsp(tree).encode(self.codec, 'ignore'))
+        elif isinstance(tree, WikiToken):
+            fp.write(rmsp(tree.name).encode(self.codec, 'ignore'))
         elif isinstance(tree, WikiSpecialTree):
             pass
         elif isinstance(tree, WikiCommentTree):
