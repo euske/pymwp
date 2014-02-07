@@ -471,7 +471,6 @@ class WikiTextParser(WikiTextTokenizer):
             self.invalid_token(pos, t)
             return True
 
-
     # _parse_special: {{ ... }}
     def _parse_special(self, pos, t):
         assert isinstance(self._tree, WikiSpecialTree), self._tree
@@ -497,6 +496,10 @@ class WikiTextParser(WikiTextTokenizer):
             # End of keyword.
             self._pop_context()
             return True
+        elif t is WikiToken.EOL:
+            # FAILSAFE: missing token.
+            self._pop_context()
+            return False
         else:
             self._push_context(WikiArgTree(), self._parse_arg_barsep,
                                stoptokens=(WikiToken.KEYWORD_CLOSE,))
@@ -512,6 +515,10 @@ class WikiTextParser(WikiTextTokenizer):
             # End of link.
             self._pop_context()
             return True
+        elif t is WikiToken.EOL:
+            # FAILSAFE: missing token.
+            self._pop_context()
+            return False
         else:
             self._push_context(WikiArgTree(), self._parse_arg_blanksep,
                                stoptokens=(WikiToken.LINK_CLOSE,))
@@ -524,6 +531,10 @@ class WikiTextParser(WikiTextTokenizer):
             # End of span.
             self._pop_context()
             return True
+        elif t is WikiToken.EOL:
+            # FAILSAFE: missing token.
+            self._pop_context()
+            return False
         else:
             return self._parse_base(pos, t)
     
@@ -584,7 +595,7 @@ class WikiTextParser(WikiTextTokenizer):
             # Start <table>.
             return True
         else:
-            return self._parse_base(pos, t)
+            return self._parse_par(pos, t)
         
     # _parse_xml_table_row: handle XML table row tags.
     def _parse_xml_table_row(self, pos, t):
@@ -644,7 +655,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._pop_context()
             return False
         else:
-            return self._parse_base(pos, t)
+            return self._parse_par(pos, t)
 
 
 # main
