@@ -250,7 +250,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_table: {| ...
     def _parse_table(self, pos, t):
         assert isinstance(self._tree, WikiTableTree), self._tree
-        if t is WikiToken.TABLE_CLOSE:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.TABLE_CLOSE:
             # End of table.
             self._pop_context()
             return True
@@ -278,7 +281,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_table_caption: |+ ...
     def _parse_table_caption(self, pos, t):
         assert isinstance(self._tree, WikiTableCaptionTree), self._tree
-        if t is WikiToken.EOL:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.EOL:
             # End of table caption.
             self._pop_context()
             return True
@@ -301,7 +307,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_table_row: |- ...
     def _parse_table_row(self, pos, t):
         assert isinstance(self._tree, WikiTableRowTree), self._tree
-        if t is WikiToken.EOL:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.EOL:
             # End of table row.
             self._pop_context()
             return True
@@ -332,7 +341,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_table_header: ! ... !! ...
     def _parse_table_header(self, pos, t):
         assert isinstance(self._tree, WikiTableHeaderTree), self._tree
-        if t is WikiToken.EOL:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.EOL:
             # End of table header.
             self._pop_context()
             return True
@@ -358,7 +370,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_table_data: | ... || ...
     def _parse_table_data(self, pos, t):
         assert isinstance(self._tree, WikiTableDataTree), self._tree
-        if t is WikiToken.EOL:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.EOL:
             # End of table data.
             self._pop_context()
             return True
@@ -408,7 +423,7 @@ class WikiTextParser(WikiTextTokenizer):
             
     # _parse_base: generic parse state.
     def _parse_base(self, pos, t):
-        if isinstance(t, XMLTagToken) and self._is_xml_closing(t):
+        if self._is_xml_closing(t):
             self._pop_context()
             return False
         elif t is WikiToken.SPECIAL_OPEN:
@@ -460,7 +475,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_special: {{ ... }}
     def _parse_special(self, pos, t):
         assert isinstance(self._tree, WikiSpecialTree), self._tree
-        if t is WikiToken.SPECIAL_CLOSE:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.SPECIAL_CLOSE:
             # End of special.
             self._pop_context()
             return True
@@ -472,7 +490,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_keyword: [[ ... ]]
     def _parse_keyword(self, pos, t):
         assert isinstance(self._tree, WikiKeywordTree), self._tree
-        if t is WikiToken.KEYWORD_CLOSE:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.KEYWORD_CLOSE:
             # End of keyword.
             self._pop_context()
             return True
@@ -484,7 +505,10 @@ class WikiTextParser(WikiTextTokenizer):
     # _parse_link: [ ... ]
     def _parse_link(self, pos, t):
         assert isinstance(self._tree, WikiLinkTree), self._tree
-        if t is WikiToken.LINK_CLOSE:
+        if self._is_xml_closing(t):
+            self._pop_context()
+            return False
+        elif t is WikiToken.LINK_CLOSE:
             # End of link.
             self._pop_context()
             return True
@@ -642,7 +666,6 @@ def main(argv):
         parser = WikiTextParser()
         for line in fp:
             line = unicode(line, codec)
-            print '!!!', repr(line)
             parser.feed_text(line)
         fp.close()
         parser.close()
