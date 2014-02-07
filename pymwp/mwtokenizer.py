@@ -88,7 +88,7 @@ class XMLTagToken(Token):
     
     # cf. https://meta.wikimedia.org/wiki/Help:HTML_in_wikitext
     NESTED_TAG = TAGS(
-        u'nowiki source ref gallery '
+        u'nowiki source ref gallery math '
         u'abbr address b bdi big '
         u'blockquote caption center cite '
         u'code dd del dfn div dl dt em '
