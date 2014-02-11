@@ -1,46 +1,6 @@
 #!/usr/bin/env python
 import sys
-from gzip import GzipFile
-from bz2 import BZ2File
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-from pymwp.pycdb import CDBReader
-
-
-##  MWCDB2Dumper
-##
-class MWCDB2Dumper(object):
-
-    def __init__(self, path):
-        self.reader = CDBReader(path)
-        return
-
-    def __iter__(self):
-        for key in self.reader:
-            (id,_,type) = key.partition(':')
-            if type != 'text': continue
-            try:
-                (pageid,_,revision) = id.partition('/')
-                pageid = int(pageid)
-                revision = int(revision)
-            except ValueError:
-                continue
-            yield self.get(pageid, revision)
-        return
-
-    def get(self, pageid, revision=0):
-        try:
-            title = self.reader['%d:title' % pageid].decode('utf-8')
-        except KeyError:
-            title = None
-        key = '%d/%d:text' % (pageid, revision)
-        buf = StringIO(self.reader[key])
-        fp = GzipFile(mode='r', fileobj=buf)
-        text = fp.read().decode('utf-8')
-        return (title, text)
-
+from pymwp.mwcdb import WikiDBReader
 
 # main
 def main(argv):
@@ -57,12 +17,13 @@ def main(argv):
         else:
             return open(path, mode=mode+'b')
     def usage():
-        print ('usage: %s [-c codec] [-o output] [-T] [cdbfile] [key ...]') % argv[0]
+        print ('usage: %s {-t|-w} [-c codec] [-o output] [-T] [cdbfile] [key ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'o:c:T')
+        (opts, args) = getopt.getopt(argv[1:], 'two:c:T')
     except getopt.GetoptError:
         return usage()
+    text = True
     output = None
     codec = 'utf-8'
     titleline = False
@@ -70,21 +31,25 @@ def main(argv):
         if k == '-o': output = v
         elif k == '-c': codec = v
         elif k == '-T': titleline = True
+        elif k == '-t': text = True
+        elif k == '-w': text = False
     if not args: return usage()
     outfp = getfp(output or '-', 'w')
-    reader = MWCDB2Dumper(args.pop(0))
-    def dump(fp, title, text):
-        if titleline:
-            fp.write(title.encode(codec, 'ignore')+'\n')
-        fp.write(text.encode(codec, 'ignore'))
-        return
+    reader = WikiDBReader(args.pop(0))
     if args:
-        for pageid in args:
-            (title, text) = reader.get(int(pageid))
-            dump(outfp, title, text)
+        pageids = [ int(pageid) for pageid in args ]
     else:
-        for (title,text) in reader:
-            dump(outfp, title, text)
+        pageids = ( pageid for (pageid,_) in reader )
+    for pageid in pageids:
+        (title,revids) = reader[pageid]
+        if titleline:
+            outfp.write(title.encode(codec, 'ignore')+'\n')
+        for revid in revids:
+            if text:
+                data = reader.get_text(pageid, revid)
+            else:
+                data = reader.get_wiki(pageid, revid)
+            outfp.write(data.encode(codec, 'ignore'))
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
