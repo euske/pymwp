@@ -71,7 +71,7 @@ class WikiDBWriter(object):
         data = value.encode(self.codec, 'ignore')
         if self.gzip:
             fp = StringIO()
-            GzipFile(mode='w', fileobj=fp).write(value)
+            GzipFile(mode='w', fileobj=fp).write(data)
             data = fp.getvalue()
         self._maker.add(key, data)
         return
@@ -80,10 +80,13 @@ class WikiDBWriter(object):
         if self._pageid != pageid:
             if self._revids:
                 revs = ' '.join( str(revid) for revid in self._revids )
-                self._maker.add('%s:revs' % revid, revs)
+                self._maker.add('%s:revs' % pageid, revs)
             self._revids = []
             self._pageid = pageid
         return
+
+    def get_size(self):
+        return self._maker.get_size()
 
     def close(self):
         self._flush_page(None)
