@@ -1,21 +1,11 @@
 #!/usr/bin/env python
 import sys
+from pymwp.utils import getfp
 from pymwp.mwcdb import WikiDBReader
 
 # main
 def main(argv):
     import getopt
-    def getfp(path, mode='r'):
-        if path == '-' and mode == 'r':
-            return sys.stdin
-        elif path == '-' and mode == 'w':
-            return sys.stdout
-        elif path.endswith('.gz'):
-            return GzipFile(path, mode=mode)
-        elif path.endswith('.bz2'):
-            return BZ2File(path, mode=mode)
-        else:
-            return open(path, mode=mode+'b')
     def usage():
         print ('usage: %s {-t|-w} [-c codec] [-o output] [-T] [cdbfile] [key ...]') % argv[0]
         return 100
