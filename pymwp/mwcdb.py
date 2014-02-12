@@ -27,7 +27,7 @@ class WikiDBReader(object):
 
     def _get_data(self, key):
         data = self._reader[key]
-        if self.gzip:
+        if key.endswith('.gz'):
             fp = StringIO(data)
             data = GzipFile(mode='r', fileobj=fp).read()
         return data.decode(self.codec, 'ignore')
@@ -48,10 +48,14 @@ class WikiDBReader(object):
 
     def get_wiki(self, pageid, revid):
         key = '%s/%s:wiki' % (pageid, revid)
+        if self.gzip:
+            key += '.gz'
         return self._get_data(key)
 
     def get_text(self, pageid, revid):
         key = '%s/%s:text' % (pageid, revid)
+        if self.gzip:
+            key += '.gz'
         return self._get_data(key)
 
 
@@ -69,7 +73,7 @@ class WikiDBWriter(object):
 
     def _add_data(self, key, value):
         data = value.encode(self.codec, 'ignore')
-        if self.gzip:
+        if key.endswith('.gz'):
             fp = StringIO()
             GzipFile(mode='w', fileobj=fp).write(data)
             data = fp.getvalue()
@@ -106,12 +110,16 @@ class WikiDBWriter(object):
     def add_wiki(self, pageid, revid, wiki):
         self.add_revid(pageid, revid)
         key = '%s/%s:wiki' % (pageid, revid)
+        if self.gzip:
+            key += '.gz'
         self._add_data(key, wiki)
         return
 
     def add_text(self, pageid, revid, wiki):
         self.add_revid(pageid, revid)
         key = '%s/%s:text' % (pageid, revid)
+        if self.gzip:
+            key += '.gz'
         self._add_data(key, wiki)
         return
 
