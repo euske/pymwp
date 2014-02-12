@@ -786,7 +786,7 @@ class WikiTextTokenizer(object):
 
 # main
 def main(argv):
-    args = argv[1:] or ['-']
+    from utils import getfp
     class Tokenizer(WikiTextTokenizer):
         def handle_text(self, pos, text):
             print (pos, text)
@@ -794,19 +794,11 @@ def main(argv):
         def handle_token(self, pos, token):
             print (pos, token)
             return
+    args = argv[1:] or ['-']
     codec = 'utf-8'
     for path in args:
         print >>sys.stderr, path
-        if path == '-':
-            fp = sys.stdin
-        elif path.endswith('.gz'):
-            from gzip import GzipFile
-            fp = GzipFile(path)
-        elif path.endswith('.bz2'):
-            from bz2 import BZ2File
-            fp = BZ2File(path)
-        else:
-            fp = open(path)
+        (_,fp) = getfp(path)
         tokenizer = Tokenizer()
         for line in fp:
             line = unicode(line, codec)

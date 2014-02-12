@@ -660,20 +660,12 @@ class WikiTextParser(WikiTextTokenizer):
 
 # main
 def main(argv):
+    from utils import getfp
     args = argv[1:] or ['-']
     codec = 'utf-8'
     for path in args:
         print >>sys.stderr, path
-        if path == '-':
-            fp = sys.stdin
-        elif path.endswith('.gz'):
-            from gzip import GzipFile
-            fp = GzipFile(path)
-        elif path.endswith('.bz2'):
-            from bz2 import BZ2File
-            fp = BZ2File(path)
-        else:
-            fp = open(path)
+        (_,fp) = getfp(path)
         parser = WikiTextParser()
         for line in fp:
             line = unicode(line, codec)

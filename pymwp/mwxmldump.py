@@ -127,22 +127,15 @@ class MWXMLDumpFilter(MWXMLDumpParser):
 
 # main
 def main(argv):
-    args = argv[1:] or ['-']
+    from utils import getfp
     class TitleExtractor(MWXMLDumpParser):
         def start_revision(self, pageid, title, revid, timestamp):
             print (pageid, title)
             return
+    args = argv[1:] or ['-']
     for path in args:
-        if path == '-':
-            fp = sys.stdin
-        elif path.endswith('.gz'):
-            from gzip import GzipFile
-            fp = GzipFile(path)
-        elif path.endswith('.bz2'):
-            from bz2 import BZ2File
-            fp = BZ2File(path)
-        else:
-            fp = open(path)
+        print >>sys.stderr, path
+        (_,fp) = getfp(path)
         parser = TitleExtractor()
         parser.feed_file(fp)
         fp.close()

@@ -1,21 +1,17 @@
 #!/usr/bin/env python
 import sys
-from gzip import GzipFile
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 from pycdb import CDBReader
 from pycdb import CDBMaker
+from utils import compress, decompress
 
 
 ##  WikiDBReader
 ##
 class WikiDBReader(object):
 
-    def __init__(self, path, gzip=True, codec='utf-8'):
+    def __init__(self, path, ext='', codec='utf-8'):
         self._reader = CDBReader(path)
-        self.gzip = gzip
+        self.ext = ext
         self.codec = codec
         return
 
@@ -27,9 +23,7 @@ class WikiDBReader(object):
 
     def _get_data(self, key):
         data = self._reader[key]
-        if key.endswith('.gz'):
-            fp = StringIO(data)
-            data = GzipFile(mode='r', fileobj=fp).read()
+        data = decompress(key, data)
         return data.decode(self.codec, 'ignore')
 
     def get_pages(self):
@@ -48,14 +42,12 @@ class WikiDBReader(object):
 
     def get_wiki(self, pageid, revid):
         key = '%s/%s:wiki' % (pageid, revid)
-        if self.gzip:
-            key += '.gz'
+        key += self.ext
         return self._get_data(key)
 
     def get_text(self, pageid, revid):
         key = '%s/%s:text' % (pageid, revid)
-        if self.gzip:
-            key += '.gz'
+        key += self.ext
         return self._get_data(key)
 
 
@@ -63,9 +55,9 @@ class WikiDBReader(object):
 ##
 class WikiDBWriter(object):
 
-    def __init__(self, path, gzip=True, codec='utf-8'):
+    def __init__(self, path, ext='', codec='utf-8'):
         self._maker = CDBMaker(path)
-        self.gzip = gzip
+        self.ext = ext
         self.codec = codec
         self._pageid = None
         self._revids = []
@@ -73,10 +65,7 @@ class WikiDBWriter(object):
 
     def _add_data(self, key, value):
         data = value.encode(self.codec, 'ignore')
-        if key.endswith('.gz'):
-            fp = StringIO()
-            GzipFile(mode='w', fileobj=fp).write(data)
-            data = fp.getvalue()
+        data = compress(key, data)
         self._maker.add(key, data)
         return
 
@@ -110,16 +99,14 @@ class WikiDBWriter(object):
     def add_wiki(self, pageid, revid, wiki):
         self.add_revid(pageid, revid)
         key = '%s/%s:wiki' % (pageid, revid)
-        if self.gzip:
-            key += '.gz'
+        key += self.ext
         self._add_data(key, wiki)
         return
 
     def add_text(self, pageid, revid, wiki):
         self.add_revid(pageid, revid)
         key = '%s/%s:text' % (pageid, revid)
-        if self.gzip:
-            key += '.gz'
+        key += self.ext
         self._add_data(key, wiki)
         return
 
