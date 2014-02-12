@@ -55,12 +55,33 @@ class WikiDBReader(object):
 ##
 class WikiDBWriter(object):
 
-    def __init__(self, path, ext='', codec='utf-8'):
-        self._maker = CDBMaker(path)
+    def __init__(self, pathpat, ext='', codec='utf-8', maxsize=2**31):
+        self.pathpat = pathpat
         self.ext = ext
         self.codec = codec
+        self.maxsize = maxsize
+        self._index = 0
+        self._maker = None
         self._pageid = None
         self._revids = []
+        return
+
+    def _new_page(self, pageid):
+        if self._pageid != pageid:
+            if self._revids:
+                revs = ' '.join( str(revid) for revid in self._revids )
+                self._maker.add('%s:revs' % pageid, revs)
+            self._revids = []
+            self._pageid = pageid
+        if self._maker is not None:
+            if self._pageid is None or self.maxsize <= self._maker.get_size():
+                self._maker.finish()
+                self._maker = None
+        if self._maker is None:
+            if self._pageid is not None:
+                path = (self.pathpat % {'index':self._index})
+                self._maker = CDBMaker(path)
+                self._index += 1
         return
 
     def _add_data(self, key, value):
@@ -69,25 +90,12 @@ class WikiDBWriter(object):
         self._maker.add(key, data)
         return
 
-    def _flush_page(self, pageid):
-        if self._pageid != pageid:
-            if self._revids:
-                revs = ' '.join( str(revid) for revid in self._revids )
-                self._maker.add('%s:revs' % pageid, revs)
-            self._revids = []
-            self._pageid = pageid
-        return
-
-    def get_size(self):
-        return self._maker.get_size()
-
     def close(self):
-        self._flush_page(None)
-        self._maker.finish()
+        self._new_page(None)
         return
 
     def add_page(self, pageid, title):
-        self._flush_page(pageid)
+        self._new_page(pageid)
         self._maker.add('%s:title' % pageid, title.encode('utf-8'))
         return
 
