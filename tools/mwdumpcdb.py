@@ -7,31 +7,34 @@ from pymwp.mwcdb import WikiDBReader
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s {-t|-w} [-c codec] [-o output] [-T] [cdbfile] [key ...]') % argv[0]
+        print ('usage: %s {-t|-w} [-c codec] [-o output] [-T] [-Z] '
+               '[cdbfile] [pageid ...]' % argv[0])
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'two:c:T')
+        (opts, args) = getopt.getopt(argv[1:], 'two:c:TZ')
     except getopt.GetoptError:
         return usage()
     text = True
-    output = None
+    output = '-'
     codec = 'utf-8'
+    ext = ''
     titleline = False
     for (k, v) in opts:
         if k == '-o': output = v
         elif k == '-c': codec = v
-        elif k == '-T': titleline = True
         elif k == '-t': text = True
         elif k == '-w': text = False
+        elif k == '-T': titleline = True
+        elif k == '-Z': ext = '.gz'
     if not args: return usage()
-    outfp = getfp(output or '-', 'w')
-    reader = WikiDBReader(args.pop(0))
+    (_,outfp) = getfp(output, 'w')
+    reader = WikiDBReader(args.pop(0), ext=ext)
     if args:
         pageids = [ int(pageid) for pageid in args ]
     else:
         pageids = ( pageid for (pageid,_) in reader )
     for pageid in pageids:
-        (title,revids) = reader[pageid]
+        (title, revids) = reader[pageid]
         if titleline:
             outfp.write(title.encode(codec, 'ignore')+'\n')
         for revid in revids:
