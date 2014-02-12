@@ -10,7 +10,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-from pymwp.pycdb import CDBMaker
+from pymwp.mwcdb import WikiDBWriter
 from pymwp.mwxmldump import MWXMLDumpFilter
 
 
@@ -62,56 +62,51 @@ class MWXMLDump2CDB(MWXMLDumpFilter):
         self.template = template
         self.maxsize = maxsize
         self._index = 0
-        self._maker = None
-        self._key = self._value = None
+        self._writer = None
         return
 
     def close(self):
         MWXMLDumpFilter.close(self)
-        if self._maker is not None:
-            self._maker.finish()
-            self._maker = None
+        if self._writer is not None:
+            self._writer.close()
+            self._writer = None
         return
 
     def start_page(self, pageid, title):
         MWXMLDumpFilter.start_page(self, pageid, title)
-        if self._maker is None:
+        if self._writer is None:
             path = (self.template % {'index':self._index})
-            self._maker = CDBMaker(path)
+            self._writer = WikiDBWriter(path)
             self._index += 1
-        self._maker.add('%s:title' % pageid, title.encode('utf-8'))
-        self._revs = []
-        return
-
-    def start_revision(self, pageid, title, revid, timestamp):
-        MWXMLDumpFilter.start_revision(self, pageid, title, revid, timestamp)
-        self._revs.append(revid)
+        self._writer.add_page(pageid, title)
         return
 
     def end_page(self, pageid, title):
         MWXMLDumpFilter.end_page(self, pageid, title)
-        revs = ' '.join( str(revid) for revid in self._revs )
-        self._maker.add('%s:revs' % pageid, revs)
-        if self.maxsize <= self._maker.get_size():
-            self._maker.finish()
-            self._maker = None
+        if self.maxsize <= self._writer.get_size():
+            self._writer.close()
+            self._writer = None
         return
     
     def open_file(self, pageid, title, revid, timestamp):
         print >>sys.stderr, (pageid, title, revid)
-        self._key = '%s/%s:wiki' % (pageid, revid)
-        self._value = StringIO()
-        return GzipFile(mode='w', fileobj=self._value)
+        self._writer.add_revid(pageid, revid)
+        return self._Stream(pageid, revid)
 
     def close_file(self, fp):
-        fp.close()
-        self._maker.add(self._key, self._value.getvalue())
-        self._key = self._value = None
+        self._writer.add_wiki(fp.pageid, fp.revid, ''.join(fp.text))
         return
 
     def write_file(self, fp, text):
-        fp.write(text.encode('utf-8'))
+        fp.text.append(text)
         return
+
+    class _Stream(object):
+        def __init__(self, pageid, revid):
+            self.pageid = pageid
+            self.revid = revid
+            self.text = []
+            return
             
 
 # main
