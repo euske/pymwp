@@ -667,11 +667,9 @@ def main(argv):
         print >>sys.stderr, path
         (_,fp) = getfp(path)
         parser = WikiTextParser()
-        for line in fp:
-            line = unicode(line, codec)
-            parser.feed_text(line)
-        fp.close()
+        parser.feed_file(fp, codec=codec)
         parser.close()
+        fp.close()
         def f(x, i=0):
             if isinstance(x, WikiTree):
                 print (' '*i+'('+repr(x))

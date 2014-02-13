@@ -178,8 +178,7 @@ class WikiTextTokenizer(object):
             self.handler(self.pos, c)
             return
 
-    def __init__(self, codec='utf-8'):
-        self._codec = codec
+    def __init__(self):
         self._scan = self._scan_bod
         self._wiki = True
         self._token = None
@@ -196,10 +195,10 @@ class WikiTextTokenizer(object):
             self._textpos = self._text = None
         return
 
-    def feed_file(self, fp):
+    def feed_file(self, fp, codec='utf-8'):
         self._lineno = 0
         for line in fp:
-            line = line.decode(self._codec)
+            line = line.decode(codec, 'ignore')
             self.feed_text(line)
             self._lineno += 1
         return
@@ -800,11 +799,9 @@ def main(argv):
         print >>sys.stderr, path
         (_,fp) = getfp(path)
         tokenizer = Tokenizer()
-        for line in fp:
-            line = unicode(line, codec)
-            tokenizer.feed_text(line)
-        fp.close()
+        tokenizer.feed_file(fp, codec=codec)
         tokenizer.close()
+        fp.close()
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
