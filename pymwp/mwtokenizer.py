@@ -507,7 +507,7 @@ class WikiTextTokenizer(object):
                 n = name2codepoint[self._entity.name]
                 self._entity.handle_char(unichr(n))
             except KeyError:
-                pass
+                self._entity.handle_char(u'&'+self._entity.name)
             self._scan = self._entity.state
             self._entity = None
             if c == u';':
