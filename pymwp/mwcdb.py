@@ -168,7 +168,7 @@ class WikiFileWriter(object):
             title = self._title.encode(self.codec, 'ignore')
             self._fp.write(title+'\n')
         self._fp.write(data.encode(self.codec, 'ignore'))
-        self._fp.write('\n')
+        self._fp.write('\n\f')
         return
 
     add_wiki = add_data

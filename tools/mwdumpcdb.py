@@ -33,7 +33,7 @@ def main(argv):
         elif k == '-Z': ext = '.gz'
     if not args: return usage()
     (_,outfp) = getfp(output, 'w')
-    reader = WikiDBReader(args.pop(0), ext=ext)
+    reader = WikiDBReader(args.pop(0), codec=codec, ext=ext)
     if args:
         pageids = [ int(pageid) for pageid in args ]
     else:
