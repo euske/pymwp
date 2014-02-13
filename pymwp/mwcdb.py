@@ -2,7 +2,7 @@
 import sys
 from pycdb import CDBReader
 from pycdb import CDBMaker
-from utils import compress, decompress
+from utils import compress, decompress, getfp
 
 
 ##  WikiDBReader
@@ -96,7 +96,8 @@ class WikiDBWriter(object):
 
     def add_page(self, pageid, title):
         self._new_page(pageid)
-        self._maker.add('%s:title' % pageid, title.encode('utf-8'))
+        title = title.encode(self.codec, 'ignore')
+        self._maker.add('%s:title' % pageid, title)
         return
 
     def add_revid(self, pageid, revid):
@@ -105,18 +106,73 @@ class WikiDBWriter(object):
         return
 
     def add_wiki(self, pageid, revid, wiki):
-        self.add_revid(pageid, revid)
+        assert revid in self._revids
         key = '%s/%s:wiki' % (pageid, revid)
         key += self.ext
         self._add_data(key, wiki)
         return
 
     def add_text(self, pageid, revid, wiki):
-        self.add_revid(pageid, revid)
+        assert revid in self._revids
         key = '%s/%s:text' % (pageid, revid)
         key += self.ext
         self._add_data(key, wiki)
         return
+
+
+##  WikiFileWriter
+##
+class WikiFileWriter(object):
+
+    def __init__(self, output=None, pathpat=None,
+                 codec='utf-8', titleline=False):
+        assert output is not None or pathpat is not None
+        self.pathpat = pathpat
+        self.codec = codec
+        self.titleline = titleline
+        self._fp = None
+        if output is not None:
+            (_,self._fp) = getfp(output, mode='w')
+        self._pageid = None
+        self._title = None
+        self._revid = None
+        return
+        
+    def close(self):
+        if self._fp is not None:
+            self._fp.close()
+        return
+
+    def add_page(self, pageid, title):
+        self._pageid = pageid
+        self._title = title
+        return
+        
+    def add_revid(self, pageid, revid):
+        assert self._pageid == pageid
+        self._revid = revid
+        return
+    
+    def add_data(self, pageid, revid, data):
+        assert self._pageid == pageid
+        assert self._title is not None
+        assert self._revid == revid
+        if self.pathpat is not None:
+            if self._fp is not None:
+                self._fp.close()
+            name = self._title.encode('utf-8').encode('quopri_codec')
+            path = (self.pathpat % {'name':name, 'pageid':pageid})
+            (_,self._fp) = getfp(path, 'w')
+        assert self._fp is not None
+        if self.titleline:
+            title = self._title.encode(self.codec, 'ignore')
+            self._fp.write(title+'\n')
+        self._fp.write(data.encode(self.codec, 'ignore'))
+        self._fp.write('\n')
+        return
+
+    add_wiki = add_data
+    add_text = add_data
 
 
 # main
