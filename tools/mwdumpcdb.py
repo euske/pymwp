@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+#
+# Usage examples:
+#  $ mwdumpcdb.py -Z jawiki.txt.cdb 19 23 346 9287
+#  $ mwdumpcdb.py -Z -w jawiki.wiki.cdb
+#  $ mwdumpcdb.py -Z -o all.txt.gz jawiki.txt.cdb
+#
 import sys
 from pymwp.utils import getfp
 from pymwp.mwcdb import WikiDBReader
@@ -7,11 +13,11 @@ from pymwp.mwcdb import WikiDBReader
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s {-t|-w} [-c codec] [-o output] [-T] [-Z] '
+        print ('usage: %s {-w} [-c codec] [-o output] [-T] [-Z] '
                '[cdbfile] [pageid ...]' % argv[0])
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'two:c:TZ')
+        (opts, args) = getopt.getopt(argv[1:], 'wo:c:TZ')
     except getopt.GetoptError:
         return usage()
     text = True
@@ -22,7 +28,6 @@ def main(argv):
     for (k, v) in opts:
         if k == '-o': output = v
         elif k == '-c': codec = v
-        elif k == '-t': text = True
         elif k == '-w': text = False
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'

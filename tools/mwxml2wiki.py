@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 #
-# usage:
-#  $ mwdump2wiki.py -n10 -t 'article%(pageid)08d.txt' jawiki.xml.bz2
+# Usage examples:
+#  $ mwxml2wiki.py -t 'article%(pageid)08d.wiki' jawiki.xml.bz2
+#  $ mwxml2wiki.py -o all.wiki.gz jawiki.xml.bz2
+#  $ mwxml2wiki.py -Z -o jawiki.wiki.cdb jawiki.xml.bz2
 #
 import sys
 from pymwp.utils import getfp
