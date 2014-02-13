@@ -138,8 +138,8 @@ def main(argv):
         (_,fp) = getfp(path)
         parser = TitleExtractor()
         parser.feed_file(fp)
-        fp.close()
         parser.close()
+        fp.close()
     return 0
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
