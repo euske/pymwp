@@ -50,11 +50,11 @@ class WikiTextExtractor(WikiTextParser):
 
     def error(self, s):
         if self.errfp is not None:
-            self.errfp.write(s)
+            self.errfp.write(s+'\n')
         return
 
     def invalid_token(self, pos, token):
-        self.error('invalid token(%d): %r\n' % (pos, token))
+        self.error('invalid token(%d): %r' % (pos, token))
         return
 
     def close(self):
@@ -135,11 +135,11 @@ class WikiLinkExtractor(WikiTextParser):
 
     def error(self, s):
         if self.errfp is not None:
-            self.errfp.write(s)
+            self.errfp.write(s+'\n')
         return
 
     def invalid_token(self, pos, token):
-        self.error('invalid token(%d): %r\n' % (pos, token))
+        self.error('invalid token(%d): %r' % (pos, token))
         return
 
     def close(self):
@@ -224,6 +224,14 @@ class Converter(object):
         self.klass = klass
         self.errfp = errfp
         return
+
+    def close(self):
+        return
+
+    def error(self, s):
+        if self.errfp is not None:
+            self.errfp.write(s+'\n')
+        return
         
     def add_page(self, pageid, title):
         print >>sys.stderr, (pageid, title)
@@ -236,16 +244,22 @@ class Converter(object):
         
     def feed_text(self, pageid, revid, text):
         parser = self.klass(errfp=self.errfp)
-        parser.feed_text(text)
-        text = u''.join(parser.close())
-        self.writer.add_text(pageid, revid, text)
+        try:
+            parser.feed_text(text)
+            text = u''.join(parser.close())
+            self.writer.add_text(pageid, revid, text)
+        except WikiParserError, e:
+            self.error('error: %r' % e)
         return
         
     def feed_file(self, pageid, revid, fp, codec='utf-8'):
         parser = self.klass(errfp=self.errfp)
-        parser.feed_file(fp, codec=codec)
-        text = u''.join(parser.close())
-        self.writer.add_text(pageid, revid, text)
+        try:
+            parser.feed_file(fp, codec=codec)
+            text = u''.join(parser.close())
+            self.writer.add_text(pageid, revid, text)
+        except WikiParserError, e:
+            self.error('error: %r' % e)
         return
 
 # main
@@ -281,28 +295,32 @@ def main(argv):
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,
             codec=codec, titleline=titleline)
-    converter = Converter(writer, klass, errfp=errfp)
-    for path in args:
-        if path.endswith('.cdb'):
-            reader = WikiDBReader(path, codec=codec, ext=ext)
-            for pageid in reader:
-                (title, revids) = reader[pageid]
-                converter.add_page(pageid, title)
-                for revid in revids:
-                    wiki = reader.get_wiki(pageid, revid)
-                    converter.add_revid(pageid, revid)
-                    converter.feed_text(pageid, revid, wiki)
-        else:
-            (path,fp) = getfp(path)
-            if path.endswith('.xml'):
-                parser = MWDump2Text(converter)
-                parser.feed_file(fp)
-                parser.close()
+    try:
+        converter = Converter(writer, klass, errfp=errfp)
+        for path in args:
+            if path.endswith('.cdb'):
+                reader = WikiDBReader(path, codec=codec, ext=ext)
+                for pageid in reader:
+                    (title, revids) = reader[pageid]
+                    converter.add_page(pageid, title)
+                    for revid in revids:
+                        wiki = reader.get_wiki(pageid, revid)
+                        converter.add_revid(pageid, revid)
+                        converter.feed_text(pageid, revid, wiki)
             else:
-                converter.add_page(0, path)
-                converter.add_revid(0, 0)
-                converter.feed_file(0, 0, fp, codec=codec)
-            fp.close()
+                (path,fp) = getfp(path)
+                if path.endswith('.xml'):
+                    parser = MWDump2Text(converter)
+                    parser.feed_file(fp)
+                    parser.close()
+                else:
+                    converter.add_page(0, path)
+                    converter.add_revid(0, 0)
+                    converter.feed_file(0, 0, fp, codec=codec)
+                fp.close()
+        converter.close()
+    finally:
+        writer.close()
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
