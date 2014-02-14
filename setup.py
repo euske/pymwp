@@ -15,20 +15,24 @@ from Wikipedia articles.''',
     author_email='yusuke at cs dot nyu dot edu',
     url='https://github.com/euske/pymwp',
     packages=[
-    'pymwp',
+        'pymwp',
     ],
     scripts=[
-    'tools/mwdumpcdb.py',
-    'tools/mwxml2wiki.py',
-    'tools/mwwiki2txt.py',
+        'tools/mwdumpcdb.py',
+        'tools/mwxml2age.py',
+        'tools/mwxml2wiki.py',
+        'tools/mwwiki2txt.py',
     ],
-    keywords=['mediawiki parser', 'text mining'],
+    keywords=[
+        'mediawiki parser',
+        'text mining'
+    ],
     classifiers=[
-    'Development Status :: 4 - Beta',
-    'Environment :: Console',
-    'Intended Audience :: Developers',
-    'Intended Audience :: Science/Research',
-    'License :: OSI Approved :: MIT License',
-    'Topic :: Text Processing',
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Topic :: Text Processing',
     ],
-    )
+)
