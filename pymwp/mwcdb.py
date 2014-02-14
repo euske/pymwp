@@ -16,7 +16,7 @@ class WikiDBReader(object):
         return
 
     def __iter__(self):
-        return self.get_pages()
+        return self.get_pageids()
 
     def __getitem__(self, pageid):
         return self.get_page(pageid)
@@ -26,11 +26,11 @@ class WikiDBReader(object):
         data = decompress(key, data)
         return data.decode(self.codec, 'ignore')
 
-    def get_pages(self):
+    def get_pageids(self):
         for key in self._reader.iterkeys():
             if key.endswith(':title'):
-                (pageid,_,title) = key.partition(':')
-                yield (int(pageid), title.decode(self.codec, 'ignore'))
+                (pageid,_,_) = key.partition(':')
+                yield int(pageid)
         return
 
     def get_page(self, pageid):

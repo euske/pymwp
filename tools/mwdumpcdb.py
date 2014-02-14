@@ -37,7 +37,7 @@ def main(argv):
     if args:
         pageids = [ int(pageid) for pageid in args ]
     else:
-        pageids = ( pageid for (pageid,_) in reader )
+        pageids = iter(reader)
     for pageid in pageids:
         (title, revids) = reader[pageid]
         if titleline:

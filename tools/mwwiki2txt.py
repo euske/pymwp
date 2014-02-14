@@ -285,9 +285,9 @@ def main(argv):
     for path in args:
         if path.endswith('.cdb'):
             reader = WikiDBReader(path, codec=codec, ext=ext)
-            for (pageid,title) in reader:
+            for pageid in reader:
+                (title, revids) = reader[pageid]
                 converter.add_page(pageid, title)
-                (_, revids) = reader[pageid]
                 for revid in revids:
                     wiki = reader.get_wiki(pageid, revid)
                     converter.add_revid(pageid, revid)
