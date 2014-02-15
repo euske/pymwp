@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 #
 # Usage examples:
-#  $ mwxml2wiki.py -t 'article%(pageid)08d.wiki' jawiki.xml.bz2
 #  $ mwxml2wiki.py -o all.wiki.gz jawiki.xml.bz2
 #  $ mwxml2wiki.py -Z -o jawiki.wiki.cdb jawiki.xml.bz2
+#  $ mwxml2wiki.py -P 'article%(pageid)08d.wiki' jawiki.xml.bz2
 #
 import sys
 from pymwp.utils import getfp
@@ -59,11 +59,11 @@ class MWXMLDump2DB(MWXMLDumpFilter):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-o output] [-t pathpat] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
                '[file ...]' % argv[0])
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'o:t:c:TZ')
+        (opts, args) = getopt.getopt(argv[1:], 'o:P:c:TZ')
     except getopt.GetoptError:
         return usage()
     args = args or ['-']
@@ -74,7 +74,7 @@ def main(argv):
     titleline = False
     for (k, v) in opts:
         if k == '-o': output = v
-        elif k == '-t': pathpat = v
+        elif k == '-P': pathpat = v
         elif k == '-c': codec = v 
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'

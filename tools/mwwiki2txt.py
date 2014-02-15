@@ -6,7 +6,7 @@
 #  $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki.xml.bz2
 #  $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki.wiki.cdb
 #  $ mwwiki2txt.py -o all.txt.bz2 jawiki.xml.bz2
-#  $ mwwiki2txt.py -t 'article%(pageid)08d.txt' jawiki.xml.bz2
+#  $ mwwiki2txt.py -P 'article%(pageid)08d.txt' jawiki.xml.bz2
 #
 import re
 import sys
@@ -266,11 +266,11 @@ class Converter(object):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-L] [-d] [-o output] [-t pathpat] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-L] [-d] [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
                '[file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'Ldo:t:c:TZ')
+        (opts, args) = getopt.getopt(argv[1:], 'Ldo:P:c:TZ')
     except getopt.GetoptError:
         return usage()
     args = args or ['-']
@@ -284,7 +284,7 @@ def main(argv):
     for (k, v) in opts:
         if k == '-d': errfp = sys.stderr
         elif k == '-o': output = v
-        elif k == '-t': pathpat = v
+        elif k == '-P': pathpat = v
         elif k == '-c': codec = v 
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'
