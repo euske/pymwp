@@ -37,11 +37,13 @@ else:
 ##
 
 # cdbiter
-def cdbiter(fp, eod):
+def cdbiter(fp, eod=0):
   kloc = 2048
-  while kloc < eod:
+  while eod == 0 or kloc < eod:
     fp.seek(kloc)
-    (klen, vlen) = unpack('<II', fp.read(8))
+    x = fp.read(8)
+    if len(x) != 8: break
+    (klen, vlen) = unpack('<II', x)
     k = fp.read(klen)
     v = fp.read(vlen)
     kloc += 8+klen+vlen
@@ -54,7 +56,6 @@ def cdbiter(fp, eod):
 class CDBReader(object):
   
   def __init__(self, cdbname, docache=False):
-    self.name = cdbname
     self._fp = file(cdbname, 'rb')
     hash0 = decode(self._fp.read(2048))
     self._hash0 = [ (hash0[i], hash0[i+1]) for i in xrange(0, 512, 2) ]
@@ -151,14 +152,18 @@ class CDBReader(object):
 # CDBMaker
 class CDBMaker(object):
 
-  def __init__(self, cdbname, tmpname=None):
+  def __init__(self, cdbname, tmpname=None, repair=False):
     self.fn = cdbname
     self.fntmp = tmpname or cdbname+'.tmp'
     self.numentries = 0
-    self._fp = file(self.fntmp, 'wb')
     self._pos = 2048                    # sizeof((h,p))*256
     self._size = 2048
     self._bucket = [ array('I') for _ in xrange(256) ]
+    if repair:
+      self._fp = file(self.fntmp, 'rb+')
+      self._read()
+    else:
+      self._fp = file(self.fntmp, 'wb')
     return
 
   def __len__(self):
@@ -180,17 +185,31 @@ class CDBMaker(object):
     self._fp.write(pack('<II', klen, vlen))
     self._fp.write(k)
     self._fp.write(v)
+    self._addkey(k, 8+klen+vlen)
+    return self
+
+  def _addkey(self, k, size):
     h = cdbhash(k)
     b = self._bucket[h % 256]
     b.append(h)
     b.append(self._pos)
-    # sizeof(keylen)+sizeof(datalen)+sizeof(key)+sizeof(data)
-    size = 8+klen+vlen
+    # size = sizeof(keylen)+sizeof(datalen)+sizeof(key)+sizeof(data)
     self._pos += size
     self._size += size+16 # bucket
     self.numentries += 1
-    return self
+    return
   
+  def _read(self):
+    self._fp.seek(self._pos)
+    while 1:
+      x = self._fp.read(8)
+      if len(x) != 8: break
+      (klen, vlen) = unpack('<II', x)
+      k = self._fp.read(klen)
+      v = self._fp.read(vlen)
+      self._addkey(k, 8+klen+vlen)
+    return
+    
   def finish(self):
     self._fp.seek(self._pos)
     pos_hash = self._pos
