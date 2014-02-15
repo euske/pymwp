@@ -19,32 +19,60 @@ How to Use
 
 **mwxml2wiki.py**
 
-Converts MediaWiki XML dump files into separate text files.
+Converts MediaWiki XML dump files into separate text files or CDB.
 
 Examples
 
-    $ mwxml2wiki.py -o big.txt enwiki-20100910-pages-articles.xml.bz2
+    $ mwxml2wiki.py -o all.wiki.gz enwiki-20140102-pages-articles.xml.bz2
 
-    $ mwxml2wiki.py -z -t 'articles-%(pageid)08d.txt' enwiki-20100910-pages-articles.xml.bz2
+    $ mwxml2wiki.py -Z -o enwiki.wiki.cdb enwiki-20140102-pages-articles.xml.bz2
 
-    $ mwxml2wiki.py -C jawiki.gz.cdb jawiki-20100910-pages-articles.xml.bz2
+    $ mwxml2wiki.py -P 'article%(pageid)08d.wiki' enwiki-20140102-pages-articles.xml.bz2
 
 Options
 
   -o filename
     Specifies the output file name.
+    Supported ending suffixes: .gz, .bz2, .cdb
+
+  -P pattern
+    Output filename pattern.
+
+  -Z
+    Gzip each record in cdb fiile.
 
 **mwwiki2txt.py**
 
-Removes MediaWiki markup from texts.
+Removes MediaWiki markup from wiki/CDB to text/CDB.
 
 Examples
 
-    $ mwwiki2txt.py article1.wiki > articke1.txt
+    $ mwwiki2txt.py article12.wiki > article12.txt
 
-    $ mwwiki2txt.py -L article1.wiki
+    $ mwwiki2txt.py -L article12.wiki > article12.link
 
-    $ mwwiki2txt.py -o jatext.gz.cdb -C jawiki.gz.cdb
+    $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki-20140107-pages-articles.xml.bz2
+
+    $ mwwiki2txt.py -Z -o enwiki.txt.cdb enwiki.wiki.cdb
+
+    $ mwwiki2txt.py -o all.txt.bz2 jawiki-20140107-pages-articles.xml.bz2
+
+    $ mwwiki2txt.py -P 'article%(pageid)08d.txt' jawiki-20140107-pages-articles.xml.bz2
+
+Options
+
+  -o filename
+    Specifies the output file name.
+    Supported ending suffixes: .gz, .bz2, .cdb
+
+  -P pattern
+    Output filename pattern.
+
+  -Z
+    Gzip each record in cdb fiile.
+
+  -L
+    Extract keywords and links instead of text.
 
 
 TODO
