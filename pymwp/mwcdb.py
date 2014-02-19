@@ -70,7 +70,7 @@ class WikiDBWriter(object):
         if self._pageid != pageid:
             if self._revids:
                 revs = ' '.join( str(revid) for revid in self._revids )
-                self._maker.add('%s:revs' % pageid, revs)
+                self._maker.add('%s:revs' % self._pageid, revs)
             self._revids = []
             self._pageid = pageid
         if self._maker is not None:
