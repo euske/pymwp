@@ -44,6 +44,8 @@ Options
 **mwwiki2txt.py**
 
 Removes MediaWiki markup from wiki/CDB to text/CDB.
+Speed: it took about 4 days to convert all the current articles in English Wikipedia.
+(enwiki-20140102-pages-articles.xml.bz2)
 
 Examples
 
