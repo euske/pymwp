@@ -6,6 +6,7 @@
 #  $ mwdumpcdb.py -Z -o all.txt.gz jawiki.txt.cdb
 #
 import sys
+import os.path
 from pymwp.utils import getfp
 from pymwp.mwcdb import WikiDBReader
 
@@ -14,7 +15,7 @@ def main(argv):
     import getopt
     def usage():
         print ('usage: %s {-w} [-c codec] [-o output] [-T] [-Z] '
-               '[cdbfile] [pageid ...]' % argv[0])
+               'cdbfile [pageid ...]' % argv[0])
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'wo:c:TZ')
@@ -33,21 +34,30 @@ def main(argv):
         elif k == '-Z': ext = '.gz'
     if not args: return usage()
     (_,outfp) = getfp(output, 'w')
-    reader = WikiDBReader(args.pop(0), codec=codec, ext=ext)
-    if args:
-        pageids = [ int(pageid) for pageid in args ]
-    else:
-        pageids = iter(reader)
-    for pageid in pageids:
-        (title, revids) = reader[pageid]
-        if titleline:
-            outfp.write(title.encode(codec, 'ignore')+'\n')
-        for revid in revids:
-            if text:
-                data = reader.get_text(pageid, revid)
-            else:
-                data = reader.get_wiki(pageid, revid)
-            outfp.write(data.encode(codec, 'ignore'))
+    readers = []
+    pageids = []
+    for arg in args:
+        if os.path.isfile(arg):
+            readers.append(WikiDBReader(arg, codec=codec, ext=ext))
+        else:
+            pageids.append(arg)
+    for reader in readers:
+        for pageid in (pageids or iter(reader)):
+            try:
+                (title, revids) = reader[pageid]
+            except KeyError:
+                continue
+            if titleline:
+                outfp.write(title.encode(codec, 'ignore')+'\n')
+            for revid in revids:
+                try:
+                    if text:
+                        data = reader.get_text(pageid, revid)
+                    else:
+                        data = reader.get_wiki(pageid, revid)
+                except KeyError:
+                    continue
+                outfp.write(data.encode(codec, 'ignore'))
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))
