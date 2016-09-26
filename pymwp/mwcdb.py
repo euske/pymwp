@@ -125,11 +125,12 @@ class WikiDBWriter(object):
 class WikiFileWriter(object):
 
     def __init__(self, output=None, pathpat=None,
-                 codec='utf-8', titleline=False):
+                 codec='utf-8', titleline=False, mode='page'):
         assert output is not None or pathpat is not None
         self.pathpat = pathpat
         self.codec = codec
         self.titleline = titleline
+        self.mode = mode
         self._fp = None
         if output is not None:
             (_,self._fp) = getfp(output, mode='w')
@@ -164,11 +165,15 @@ class WikiFileWriter(object):
             path = (self.pathpat % {'name':name, 'pageid':pageid})
             (_,self._fp) = getfp(path, 'w')
         assert self._fp is not None
-        if self.titleline:
-            title = self._title.encode(self.codec, 'ignore')
-            self._fp.write(title+'\n')
-        self._fp.write(data.encode(self.codec, 'ignore'))
-        self._fp.write('\n\f')
+        if self.mode == 'page':
+            if self.titleline:
+                title = self._title.encode(self.codec, 'ignore')
+                self._fp.write(title+'\n')
+            self._fp.write(data.encode(self.codec, 'ignore'))
+            self._fp.write('\n\f')
+        else:
+            self._fp.write(self._title.encode(self.codec, 'ignore')+'\t')
+            self._fp.write(data.encode(self.codec, 'ignore')+'\n')
         return
 
     add_wiki = add_data
