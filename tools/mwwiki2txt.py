@@ -59,7 +59,8 @@ class WikiTextExtractor(WikiTextParser):
 
     def close(self):
         WikiTextParser.close(self)
-        return self.convert(self.get_root())
+        texts = self.convert(self.get_root())
+        return u''.join(texts)
 
     def convert(self, tree):
         if tree is WikiToken.PAR:
@@ -144,7 +145,8 @@ class WikiLinkExtractor(WikiTextParser):
 
     def close(self):
         WikiTextParser.close(self)
-        return self.convert(self.get_root())
+        texts = self.convert(self.get_root())
+        return u''.join(texts)
 
     def convert(self, tree):
         if isinstance(tree, WikiKeywordTree):
@@ -171,6 +173,45 @@ class WikiLinkExtractor(WikiTextParser):
                         text = tree[-1].get_text()
                         out += (text,)
                     yield u'\t'.join(out)+u'\n'
+        elif isinstance(tree, WikiTree):
+            for c in tree:
+                for x in self.convert(c):
+                    yield x
+        return
+
+
+##  WikiCategoryExtractor
+##
+class WikiCategoryExtractor(WikiTextParser):
+
+    def __init__(self, errfp=None):
+        WikiTextParser.__init__(self)
+        self.errfp = errfp
+        return
+
+    def error(self, s):
+        if self.errfp is not None:
+            self.errfp.write(s+'\n')
+        return
+
+    def invalid_token(self, pos, token):
+        self.error('invalid token(%d): %r' % (pos, token))
+        return
+
+    def close(self):
+        WikiTextParser.close(self)
+        texts = self.convert(self.get_root())
+        return u'\t'.join(texts)
+
+    def convert(self, tree):
+        if isinstance(tree, WikiKeywordTree):
+            if tree:
+                if isinstance(tree[0], WikiTree):
+                    name = tree[0].get_text()
+                else:
+                    name = tree[0]
+                if isinstance(name, unicode) and name.startswith('Category:'):
+                    yield name
         elif isinstance(tree, WikiTree):
             for c in tree:
                 for x in self.convert(c):
@@ -246,8 +287,7 @@ class Converter(object):
         parser = self.klass(errfp=self.errfp)
         try:
             parser.feed_text(text)
-            text = u''.join(parser.close())
-            self.writer.add_text(pageid, revid, text)
+            self.writer.add_text(pageid, revid, parser.close())
         except WikiParserError, e:
             self.error('error: %r' % e)
         return
@@ -256,8 +296,7 @@ class Converter(object):
         parser = self.klass(errfp=self.errfp)
         try:
             parser.feed_file(fp, codec=codec)
-            text = u''.join(parser.close())
-            self.writer.add_text(pageid, revid, text)
+            self.writer.add_text(pageid, revid, parser.close())
         except WikiParserError, e:
             self.error('error: %r' % e)
         return
@@ -266,11 +305,11 @@ class Converter(object):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-L] [-d] [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-L|-C] [-d] [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
                '[file ...]') % argv[0]
         return 100
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'Ldo:P:c:TZ')
+        (opts, args) = getopt.getopt(argv[1:], 'LCdo:P:c:m:TZ')
     except getopt.GetoptError:
         return usage()
     args = args or ['-']
@@ -279,6 +318,7 @@ def main(argv):
     codec = 'utf-8'
     ext = ''
     pathpat = None
+    mode = 'page'
     titleline = False
     klass = WikiTextExtractor
     for (k, v) in opts:
@@ -286,15 +326,17 @@ def main(argv):
         elif k == '-o': output = v
         elif k == '-P': pathpat = v
         elif k == '-c': codec = v 
+        elif k == '-m': mode = v 
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'
         elif k == '-L': klass = WikiLinkExtractor
+        elif k == '-C': klass = WikiCategoryExtractor
     if output.endswith('.cdb'):
         writer = WikiDBWriter(output, codec=codec, ext=ext)
     else:
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,
-            codec=codec, titleline=titleline)
+            codec=codec, titleline=titleline, mode=mode)
     try:
         converter = Converter(writer, klass, errfp=errfp)
         for path in args:
