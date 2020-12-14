@@ -14,7 +14,7 @@ from pymwp.mwcdb import WikiDBReader
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s {-w} [-c codec] [-o output] [-T] [-Z] '
+        print ('usage: %s {-w} [-c encoding] [-o output] [-T] [-Z] '
                'cdbfile [pageid ...]' % argv[0])
         return 100
     try:
@@ -23,22 +23,22 @@ def main(argv):
         return usage()
     text = True
     output = '-'
-    codec = 'utf-8'
+    encoding = 'utf-8'
     ext = ''
     titleline = False
     for (k, v) in opts:
         if k == '-o': output = v
-        elif k == '-c': codec = v
+        elif k == '-c': encoding = v
         elif k == '-w': text = False
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'
     if not args: return usage()
-    (_,outfp) = getfp(output, 'w')
+    (_,outfp) = getfp(output, 'w', encoding=encoding)
     readers = []
     pageids = []
     for arg in args:
         if os.path.isfile(arg):
-            readers.append(WikiDBReader(arg, codec=codec, ext=ext))
+            readers.append(WikiDBReader(arg, encoding=encoding, ext=ext))
         else:
             pageids.append(arg)
     for reader in readers:
@@ -48,7 +48,7 @@ def main(argv):
             except KeyError:
                 continue
             if titleline:
-                outfp.write(title.encode(codec, 'ignore')+'\n')
+                outfp.write(title+'\n')
             for revid in revids:
                 try:
                     if text:
@@ -57,7 +57,7 @@ def main(argv):
                         data = reader.get_wiki(pageid, revid)
                 except KeyError:
                     continue
-                outfp.write(data.encode(codec, 'ignore'))
+                outfp.write(data)
     return
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

@@ -16,16 +16,16 @@ class WikiAgeExtractor(MWXMLDumpParser):
         MWXMLDumpParser.__init__(self)
         self.current = current
         return
-    
+
     def start_page(self, pageid, title):
         self._timestamps = []
         return
-        
+
     def end_page(self, pageid, title):
         days = [ int(dt/86400) for dt in self._timestamps ]
-        print pageid, ' '.join(map(str, days))
+        print(pageid, ' '.join(map(str, days)))
         return
-        
+
     def start_revision(self, pageid, title, revid, timestamp):
         t = time.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
         self._timestamps.append(self.current - time.mktime(t))
@@ -35,7 +35,7 @@ class WikiAgeExtractor(MWXMLDumpParser):
 def main(argv):
     args = argv[1:] or ['-']
     for path in args:
-        print >>sys.stderr, path
+        print(path, file=sys.stderr)
         (_,fp) = getfp(path)
         parser = WikiAgeExtractor(time.time())
         parser.feed_file(fp)

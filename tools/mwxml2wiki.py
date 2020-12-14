@@ -33,7 +33,7 @@ class MWXMLDump2DB(MWXMLDumpFilter):
         return
 
     def open_file(self, pageid, title, revid, timestamp):
-        print >>sys.stderr, (pageid, title, revid)
+        print(pageid, title, revid, file=sys.stderr)
         pageid = int(pageid)
         revid = int(pageid)
         self.writer.add_revid(pageid, revid)
@@ -53,13 +53,13 @@ class MWXMLDump2DB(MWXMLDumpFilter):
             self.revid = revid
             self.text = []
             return
-            
+
 
 # main
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-o output] [-P pathpat] [-c encoding] [-T] [-Z] '
                '[file ...]' % argv[0])
         return 100
     try:
@@ -68,22 +68,22 @@ def main(argv):
         return usage()
     args = args or ['-']
     output = '-'
-    codec = 'utf-8'
+    encoding = 'utf-8'
     ext = ''
     pathpat = None
     titleline = False
     for (k, v) in opts:
         if k == '-o': output = v
         elif k == '-P': pathpat = v
-        elif k == '-c': codec = v 
+        elif k == '-c': encoding = v
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'
     if output.endswith('.cdb'):
-        writer = WikiDBWriter(output, codec=codec, ext=ext)
+        writer = WikiDBWriter(output, encoding=encoding, ext=ext)
     else:
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,
-            codec=codec, titleline=titleline)
+            encoding=encoding, titleline=titleline)
     parser = MWXMLDump2DB(writer)
     for path in args:
         (_,fp) = getfp(path)

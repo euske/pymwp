@@ -6,7 +6,7 @@ from xml.parsers.expat import ParserCreate
 ##  MWXMLDumpParser
 ##
 class MWXMLDumpParser(object):
-    
+
     def __init__(self):
         self._expat = ParserCreate()
         self._expat.StartElementHandler = self.start_element
@@ -18,11 +18,11 @@ class MWXMLDumpParser(object):
 
     def close(self):
         return
-    
+
     def feed_file(self, fp):
-        self._expat.ParseFile(fp)
+        self._expat.ParseFile(fp.buffer)
         return
-        
+
     def start_element(self, name, attrs):
         if name == 'page':
             self._revid = None
@@ -50,7 +50,7 @@ class MWXMLDumpParser(object):
                 self._handler = self.handle_text
         self._stack.append(name)
         return
-    
+
     def end_element(self, name):
         self._stack.pop()
         self._handler = None
@@ -77,7 +77,7 @@ class MWXMLDumpParser(object):
     def _handle_timestamp(self, data):
         self._timestamp += data
         return
-    
+
     def start_page(self, pageid, title):
         return
     def end_page(self, pageid, title):
@@ -103,14 +103,14 @@ class MWXMLDumpFilter(MWXMLDumpParser):
         MWXMLDumpParser.start_revision(self, pageid, title, revid, timestamp)
         self._fp = self.open_file(pageid, title, revid, timestamp)
         return
-    
+
     def end_revision(self, pageid, title, revid, timestamp):
         MWXMLDumpParser.end_revision(self, pageid, title, revid, timestamp)
         if self._fp is not None:
             self.close_file(self._fp)
             self._fp = None
         return
-    
+
     def handle_text(self, text):
         MWXMLDumpParser.handle_text(self, text)
         if self._fp is not None:
@@ -130,11 +130,11 @@ def main(argv):
     from utils import getfp
     class TitleExtractor(MWXMLDumpParser):
         def start_revision(self, pageid, title, revid, timestamp):
-            print (pageid, title)
+            print(pageid, title)
             return
     args = argv[1:] or ['-']
     for path in args:
-        print >>sys.stderr, path
+        print(path, file=sys.stderr)
         (_,fp) = getfp(path)
         parser = TitleExtractor()
         parser.feed_file(fp)

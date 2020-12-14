@@ -68,7 +68,7 @@ class WikiTextExtractor(WikiTextParser):
         elif isinstance(tree, XMLEmptyTagToken):
             if tree.name in XMLTagToken.BR_TAG:
                 yield u'\n'
-        elif isinstance(tree, unicode):
+        elif isinstance(tree, str):
             yield rmsp(tree)
         elif isinstance(tree, WikiToken):
             yield rmsp(tree.name)
@@ -91,7 +91,7 @@ class WikiTextExtractor(WikiTextParser):
                     name = tree[0].get_text()
                 else:
                     name = tree[0]
-                if isinstance(name, unicode) and not isignored(name):
+                if isinstance(name, str) and not isignored(name):
                     for x in self.convert(tree[-1]):
                         yield x
         elif isinstance(tree, WikiLinkTree):
@@ -155,7 +155,7 @@ class WikiLinkExtractor(WikiTextParser):
                     name = tree[0].get_text()
                 else:
                     name = tree[0]
-                if isinstance(name, unicode):
+                if isinstance(name, str):
                     out = (u'keyword', name)
                     if 2 <= len(tree) and not isignored(name):
                         text = tree[-1].get_text()
@@ -167,7 +167,7 @@ class WikiLinkExtractor(WikiTextParser):
                     url = tree[0].get_text()
                 else:
                     url = tree[0]
-                if isinstance(url, unicode):
+                if isinstance(url, str):
                     out = (u'link', url)
                     if 2 <= len(tree):
                         text = tree[-1].get_text()
@@ -210,7 +210,7 @@ class WikiCategoryExtractor(WikiTextParser):
                     name = tree[0].get_text()
                 else:
                     name = tree[0]
-                if isinstance(name, unicode) and name.startswith('Category:'):
+                if isinstance(name, str) and name.startswith('Category:'):
                     yield name
         elif isinstance(tree, WikiTree):
             for c in tree:
@@ -239,11 +239,11 @@ class MWDump2Text(MWXMLDumpFilter):
         revid = int(pageid)
         self.converter.add_revid(pageid, revid)
         return self._Stream(pageid, revid)
-    
+
     def close_file(self, fp):
         self.converter.feed_text(fp.pageid, fp.revid, u''.join(fp.text))
         return
-    
+
     def write_file(self, fp, text):
         fp.text.append(text)
         return
@@ -259,7 +259,7 @@ class MWDump2Text(MWXMLDumpFilter):
 ##  Converter
 ##
 class Converter(object):
-    
+
     def __init__(self, writer, klass, errfp=None):
         self.writer = writer
         self.klass = klass
@@ -273,31 +273,31 @@ class Converter(object):
         if self.errfp is not None:
             self.errfp.write(s+'\n')
         return
-        
+
     def add_page(self, pageid, title):
-        print >>sys.stderr, (pageid, title)
+        print(pageid, title, file=sys.stderr)
         self.writer.add_page(pageid, title)
         return
-        
+
     def add_revid(self, pageid, revid):
         self.writer.add_revid(pageid, revid)
         return
-        
+
     def feed_text(self, pageid, revid, text):
         parser = self.klass(errfp=self.errfp)
         try:
             parser.feed_text(text)
             self.writer.add_text(pageid, revid, parser.close())
-        except WikiParserError, e:
+        except WikiParserError as e:
             self.error('error: %r' % e)
         return
-        
-    def feed_file(self, pageid, revid, fp, codec='utf-8'):
+
+    def feed_file(self, pageid, revid, fp):
         parser = self.klass(errfp=self.errfp)
         try:
-            parser.feed_file(fp, codec=codec)
+            parser.feed_file(fp)
             self.writer.add_text(pageid, revid, parser.close())
-        except WikiParserError, e:
+        except WikiParserError as e:
             self.error('error: %r' % e)
         return
 
@@ -305,7 +305,7 @@ class Converter(object):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-L|-C] [-d] [-o output] [-P pathpat] [-c codec] [-T] [-Z] '
+        print ('usage: %s [-L|-C] [-d] [-o output] [-P pathpat] [-c encoding] [-T] [-Z] '
                '[file ...]') % argv[0]
         return 100
     try:
@@ -315,7 +315,7 @@ def main(argv):
     args = args or ['-']
     errfp = None
     output = '-'
-    codec = 'utf-8'
+    encoding = 'utf-8'
     ext = ''
     pathpat = None
     mode = 'page'
@@ -325,23 +325,23 @@ def main(argv):
         if k == '-d': errfp = sys.stderr
         elif k == '-o': output = v
         elif k == '-P': pathpat = v
-        elif k == '-c': codec = v 
-        elif k == '-m': mode = v 
+        elif k == '-c': encoding = v
+        elif k == '-m': mode = v
         elif k == '-T': titleline = True
         elif k == '-Z': ext = '.gz'
         elif k == '-L': klass = WikiLinkExtractor
         elif k == '-C': klass = WikiCategoryExtractor
     if output.endswith('.cdb'):
-        writer = WikiDBWriter(output, codec=codec, ext=ext)
+        writer = WikiDBWriter(output, encoding=encoding, ext=ext)
     else:
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,
-            codec=codec, titleline=titleline, mode=mode)
+            encoding=encoding, titleline=titleline, mode=mode)
     try:
         converter = Converter(writer, klass, errfp=errfp)
         for path in args:
             if path.endswith('.cdb'):
-                reader = WikiDBReader(path, codec=codec, ext=ext)
+                reader = WikiDBReader(path, encoding=encoding, ext=ext)
                 for pageid in reader:
                     (title, revids) = reader[pageid]
                     converter.add_page(pageid, title)
@@ -350,7 +350,7 @@ def main(argv):
                         converter.add_revid(pageid, revid)
                         converter.feed_text(pageid, revid, wiki)
             else:
-                (path,fp) = getfp(path)
+                (path,fp) = getfp(path, encoding=encoding)
                 if path.endswith('.xml'):
                     parser = MWDump2Text(converter)
                     parser.feed_file(fp)
@@ -358,7 +358,7 @@ def main(argv):
                 else:
                     converter.add_page(0, path)
                     converter.add_revid(0, 0)
-                    converter.feed_file(0, 0, fp, codec=codec)
+                    converter.feed_file(0, 0, fp)
                 fp.close()
         converter.close()
     finally:

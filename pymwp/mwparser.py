@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import sys
-from mwtokenizer import WikiToken
-from mwtokenizer import ExtensionToken
-from mwtokenizer import WikiHeadlineToken
-from mwtokenizer import WikiItemizeToken
-from mwtokenizer import XMLTagToken
-from mwtokenizer import XMLStartTagToken
-from mwtokenizer import XMLEndTagToken
-from mwtokenizer import WikiTextTokenizer
+from .mwtokenizer import WikiToken
+from .mwtokenizer import ExtensionToken
+from .mwtokenizer import WikiHeadlineToken
+from .mwtokenizer import WikiItemizeToken
+from .mwtokenizer import XMLTagToken
+from .mwtokenizer import XMLStartTagToken
+from .mwtokenizer import XMLEndTagToken
+from .mwtokenizer import WikiTextTokenizer
 
 
 ##  WikiParserError
@@ -18,7 +18,7 @@ class WikiParserStackOverflow(WikiParserError): pass
 
 ##  WikiTree
 ##
-class WikiTree(object):
+class WikiTree:
 
     def __init__(self):
         self._subtree = []
@@ -44,14 +44,14 @@ class WikiTree(object):
         for x in self:
             if isinstance(x, WikiTree):
                 s += x.get_text()
-            elif isinstance(x, basestring):
+            elif isinstance(x, str):
                 s += x
         return s
 
     def append(self, t):
         if (self._subtree and
-            isinstance(t, basestring) and
-            isinstance(self._subtree[-1], basestring)):
+            isinstance(t, str) and
+            isinstance(self._subtree[-1], str)):
             assert type(t) is type(self._subtree[-1]), (t, self._subtree[-1])
             self._subtree[-1] += t
         else:
@@ -131,7 +131,7 @@ class WikiTextParser(WikiTextTokenizer):
 
     def feed_token(self, pos, token):
         while 1:
-            #print (token, self._parse)
+            #print(token, self._parse)
             if self._parse(pos, token): break
         return
 
@@ -146,7 +146,7 @@ class WikiTextParser(WikiTextTokenizer):
         return
 
     def invalid_token(self, pos, token):
-        print >>sys.stderr, (self._parse, pos, token)
+        print(self._parse, pos, token, file=sys.stderr)
         return
 
     def _push_context(self, tree, parse, stoptokens=None, xmlcontext=None):
@@ -212,7 +212,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_base(pos, t)
-            
+
     # _parse_itemize: *:#
     def _parse_itemize(self, pos, t):
         assert isinstance(self._tree, WikiItemizeTree), self._tree
@@ -222,7 +222,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_par(pos, t)
-        
+
     # _parse_headline: === ... ===
     def _parse_headline(self, pos, t):
         assert isinstance(self._tree, WikiHeadlineTree), self._tree
@@ -236,7 +236,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_base(pos, t)
-        
+
     # _parse_pre:
     def _parse_pre(self, pos, t):
         assert isinstance(self._tree, WikiPreTree), self._tree
@@ -303,7 +303,7 @@ class WikiTextParser(WikiTextTokenizer):
             # Anything else is table argument.
             self._push_context(WikiArgTree(), self._parse_table_arg)
             return False
-        
+
     # _parse_table_row: |- ...
     def _parse_table_row(self, pos, t):
         assert isinstance(self._tree, WikiTableRowTree), self._tree
@@ -420,7 +420,7 @@ class WikiTextParser(WikiTextTokenizer):
             return False
         else:
             return self._parse_base(pos, t)
-            
+
     # _parse_base: generic parse state.
     def _parse_base(self, pos, t):
         if self._is_xml_closing(t):
@@ -463,7 +463,7 @@ class WikiTextParser(WikiTextTokenizer):
             # any unhandled XML token.
             self._tree.append(t)
             return True
-        elif isinstance(t, basestring):
+        elif isinstance(t, str):
             # text string.
             self._tree.append(t)
             return True
@@ -504,7 +504,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._push_context(WikiArgTree(), self._parse_arg_barsep,
                                stoptokens=(WikiToken.KEYWORD_CLOSE,))
             return False
-        
+
     # _parse_link: [ ... ]
     def _parse_link(self, pos, t):
         assert isinstance(self._tree, WikiLinkTree), self._tree
@@ -523,7 +523,7 @@ class WikiTextParser(WikiTextTokenizer):
             self._push_context(WikiArgTree(), self._parse_arg_blanksep,
                                stoptokens=(WikiToken.LINK_CLOSE,))
             return False
-    
+
     # _parse_span: ''...'', '''...''', etc.
     def _parse_span(self, pos, t):
         assert isinstance(self._tree, WikiSpanTree), self._tree
@@ -537,7 +537,7 @@ class WikiTextParser(WikiTextTokenizer):
             return False
         else:
             return self._parse_base(pos, t)
-    
+
     # _parse_arg_barsep: ...|...|...
     def _parse_arg_barsep(self, pos, t):
         assert isinstance(self._tree, WikiArgTree), self._tree
@@ -552,7 +552,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_base(pos, t)
-    
+
     # _parse_arg_blanksep: ... ... ...
     def _parse_arg_blanksep(self, pos, t):
         assert isinstance(self._tree, WikiArgTree), self._tree
@@ -567,7 +567,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_base(pos, t)
-            
+
     # _parse_comment: <!-- ... -->
     def _parse_comment(self, pos, t):
         assert isinstance(self._tree, WikiCommentTree), self._tree
@@ -578,7 +578,7 @@ class WikiTextParser(WikiTextTokenizer):
         else:
             self._tree.append(t)
             return True
-        
+
     # _parse_xml_table: handle XML table tags.
     def _parse_xml_table(self, pos, t):
         assert isinstance(self._tree, WikiXMLTableTree), self._tree
@@ -596,7 +596,7 @@ class WikiTextParser(WikiTextTokenizer):
             return True
         else:
             return self._parse_par(pos, t)
-        
+
     # _parse_xml_table_row: handle XML table row tags.
     def _parse_xml_table_row(self, pos, t):
         assert isinstance(self._tree, WikiXMLTableRowTree), self._tree
@@ -617,7 +617,7 @@ class WikiTextParser(WikiTextTokenizer):
     def _parse_xml_par(self, pos, t):
         assert isinstance(self._tree, WikiXMLParTree), self._tree
         if (isinstance(t, XMLEndTagToken) and
-            t.name in XMLTagToken.PAR_TAG):            
+            t.name in XMLTagToken.PAR_TAG):
             # End of XML paragraph.
             self._pop_context()
             return True
@@ -662,12 +662,11 @@ class WikiTextParser(WikiTextTokenizer):
 def main(argv):
     from utils import getfp
     args = argv[1:] or ['-']
-    codec = 'utf-8'
     for path in args:
-        print >>sys.stderr, path
+        print(path, file=sys.stderr)
         (_,fp) = getfp(path)
         parser = WikiTextParser()
-        parser.feed_file(fp, codec=codec)
+        parser.feed_file(fp)
         parser.close()
         fp.close()
         def f(x, i=0):
@@ -680,7 +679,7 @@ def main(argv):
                 print (' '*i+repr(x))
             elif isinstance(x, XMLTagToken):
                 print (' '*i+repr(x))
-            elif isinstance(x, basestring):
+            elif isinstance(x, str):
                 print (' '*i+repr(x))
             else:
                 assert 0, x

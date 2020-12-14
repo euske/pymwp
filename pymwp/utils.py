@@ -1,34 +1,34 @@
 #!/usr/bin/env python
 import sys
-from gzip import GzipFile
-from bz2 import BZ2File
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+import gzip
+import bz2
+from io import BytesIO
 
-def getfp(path, mode='r'):
+def getfp(path, mode='r', encoding='utf-8'):
     if path == '-' and mode == 'r':
         return (path, sys.stdin)
     elif path == '-' and mode == 'w':
         return (path, sys.stdout)
     elif path.endswith('.gz'):
-        return (path[:-3], GzipFile(path, mode=mode))
+        return (path[:-3], gzip.open(path, mode=mode+'t', encoding=encoding))
     elif path.endswith('.bz2'):
-        return (path[:-4], BZ2File(path, mode=mode))
+        return (path[:-4], bz2.open(path, mode=mode+'t', encoding=encoding))
+    elif path.endswith('.7z'):
+        import py7zr
+        return (path[:-4], py7zr.open(path, mode=mode+'t', encoding=encoding))
     else:
-        return (path, open(path, mode=mode+'b'))
+        return (path, open(path, mode=mode, encoding=encoding))
 
 def compress(name, data):
     if name.endswith('.gz'):
-        buf = StringIO()
-        fp = GzipFile(mode='w', fileobj=buf)
+        buf = BytesIO()
+        fp = gzip.GzipFile(mode='w', fileobj=buf)
         fp.write(data)
         fp.close()
         data = buf.getvalue()
     elif name.endswith('.bz2'):
-        buf = StringIO()
-        fp = BZ2File(mode='w', fileobj=buf)
+        buf = BytesIO()
+        fp = bz2.BZ2File(mode='w', fileobj=buf)
         fp.write(data)
         fp.close()
         data = buf.getvalue()
@@ -36,11 +36,11 @@ def compress(name, data):
 
 def decompress(name, data):
     if name.endswith('.gz'):
-        buf = StringIO(data)
-        fp = GzipFile(mode='r', fileobj=buf)
+        buf = BytesIO(data)
+        fp = gzip.GzipFile(mode='r', fileobj=buf)
         data = fp.read()
     elif name.endswith('.bz2'):
-        buf = StringIO(data)
-        fp = BZ2File(mode='r', fileobj=buf)
+        buf = BytesIO(data)
+        fp = bz2.BZ2File(mode='r', fileobj=buf)
         data = fp.read()
     return data
