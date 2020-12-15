@@ -2,13 +2,13 @@
 #
 # Usage examples:
 #  $ mwxml2wiki.py -o all.wiki.gz jawiki.xml.bz2
-#  $ mwxml2wiki.py -Z -o jawiki.wiki.cdb jawiki.xml.bz2
+#  $ mwxml2wiki.py -Z -o jawiki.wiki.db jawiki.xml.bz2
 #  $ mwxml2wiki.py -P 'article%(pageid)08d.wiki' jawiki.xml.bz2
 #
 import sys
 from pymwp.utils import getfp
-from pymwp.mwcdb import WikiDBWriter
-from pymwp.mwcdb import WikiFileWriter
+from pymwp.mwdb import WikiDB
+from pymwp.mwdb import WikiFileWriter
 from pymwp.mwxmldump import MWXMLDumpFilter
 
 
@@ -33,24 +33,25 @@ class MWXMLDump2DB(MWXMLDumpFilter):
         return
 
     def open_file(self, pageid, title, revid, timestamp):
+        if ':' in title: return None
         print(pageid, title, revid, file=sys.stderr)
         pageid = int(pageid)
-        revid = int(pageid)
-        self.writer.add_revid(pageid, revid)
-        return self._Stream(pageid, revid)
+        revid = int(revid)
+        return self._Stream(pageid, revid, timestamp)
 
     def close_file(self, fp):
-        self.writer.add_wiki(fp.pageid, fp.revid, ''.join(fp.text))
+        self.writer.add_rev(fp.pageid, fp.revid, ''.join(fp.text), fp.timestamp)
         return
 
     def write_file(self, fp, text):
         fp.text.append(text)
         return
 
-    class _Stream(object):
-        def __init__(self, pageid, revid):
+    class _Stream:
+        def __init__(self, pageid, revid, timestamp):
             self.pageid = pageid
             self.revid = revid
+            self.timestamp = timestamp
             self.text = []
             return
 
@@ -69,17 +70,17 @@ def main(argv):
     args = args or ['-']
     output = '-'
     encoding = 'utf-8'
-    ext = ''
     pathpat = None
     titleline = False
+    gzipped = False
     for (k, v) in opts:
         if k == '-o': output = v
         elif k == '-P': pathpat = v
         elif k == '-c': encoding = v
         elif k == '-T': titleline = True
-        elif k == '-Z': ext = '.gz'
-    if output.endswith('.cdb'):
-        writer = WikiDBWriter(output, encoding=encoding, ext=ext)
+        elif k == '-Z': gzipped = True
+    if output.endswith('.db'):
+        writer = WikiDB(output, gzipped=gzipped)
     else:
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,

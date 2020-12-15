@@ -18,7 +18,7 @@ from Wikipedia articles.''',
         'pymwp',
     ],
     scripts=[
-        'tools/mwdumpcdb.py',
+        'tools/mwdumpdb.py',
         'tools/mwxml2age.py',
         'tools/mwxml2wiki.py',
         'tools/mwwiki2txt.py',

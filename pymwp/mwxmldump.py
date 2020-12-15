@@ -5,7 +5,7 @@ from xml.parsers.expat import ParserCreate
 
 ##  MWXMLDumpParser
 ##
-class MWXMLDumpParser(object):
+class MWXMLDumpParser:
 
     def __init__(self):
         self._expat = ParserCreate()

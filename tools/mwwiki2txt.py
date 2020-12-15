@@ -248,7 +248,7 @@ class MWDump2Text(MWXMLDumpFilter):
         fp.text.append(text)
         return
 
-    class _Stream(object):
+    class _Stream:
         def __init__(self, pageid, revid):
             self.pageid = pageid
             self.revid = revid
@@ -258,7 +258,7 @@ class MWDump2Text(MWXMLDumpFilter):
 
 ##  Converter
 ##
-class Converter(object):
+class Converter:
 
     def __init__(self, writer, klass, errfp=None):
         self.writer = writer
