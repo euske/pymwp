@@ -3,8 +3,8 @@
 # Usage examples:
 #  $ mwwiki2txt.py article12.wiki > article12.txt
 #  $ mwwiki2txt.py -L article12.wiki > article12.link
-#  $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki.xml.bz2
-#  $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki.wiki.cdb
+#  $ mwwiki2txt.py -Z -o jawiki.txt.db jawiki.xml.bz2
+#  $ mwwiki2txt.py -Z -o jawiki.txt.db jawiki.wiki.db
 #  $ mwwiki2txt.py -o all.txt.bz2 jawiki.xml.bz2
 #  $ mwwiki2txt.py -P 'article%(pageid)08d.txt' jawiki.xml.bz2
 #
@@ -26,9 +26,8 @@ from pymwp.mwparser import WikiTableTree
 from pymwp.mwparser import WikiTableCellTree
 from pymwp.mwparser import WikiParserError
 from pymwp.mwxmldump import MWXMLDumpFilter
-from pymwp.mwcdb import WikiDBReader
-from pymwp.mwcdb import WikiDBWriter
-from pymwp.mwcdb import WikiFileWriter
+from pymwp.mwdb import WikiDB
+from pymwp.mwdb import WikiFileWriter
 from pymwp.utils import getfp
 
 
@@ -237,7 +236,6 @@ class MWDump2Text(MWXMLDumpFilter):
     def open_file(self, pageid, title, revid, timestamp):
         pageid = int(pageid)
         revid = int(pageid)
-        self.converter.add_revid(pageid, revid)
         return self._Stream(pageid, revid)
 
     def close_file(self, fp):
@@ -279,24 +277,20 @@ class Converter:
         self.writer.add_page(pageid, title)
         return
 
-    def add_revid(self, pageid, revid):
-        self.writer.add_revid(pageid, revid)
-        return
-
-    def feed_text(self, pageid, revid, text):
+    def feed_text(self, pageid, revid, timestamp, text):
         parser = self.klass(errfp=self.errfp)
         try:
             parser.feed_text(text)
-            self.writer.add_text(pageid, revid, parser.close())
+            self.writer.add_content(pageid, revid, timestamp, parser.close())
         except WikiParserError as e:
             self.error('error: %r' % e)
         return
 
-    def feed_file(self, pageid, revid, fp):
+    def feed_file(self, pageid, revid, timestamp, fp):
         parser = self.klass(errfp=self.errfp)
         try:
             parser.feed_file(fp)
-            self.writer.add_text(pageid, revid, parser.close())
+            self.writer.add_content(pageid, revid, timestamp, parser.close())
         except WikiParserError as e:
             self.error('error: %r' % e)
         return
@@ -316,10 +310,10 @@ def main(argv):
     errfp = None
     output = '-'
     encoding = 'utf-8'
-    ext = ''
     pathpat = None
     mode = 'page'
     titleline = False
+    gzipped = False
     klass = WikiTextExtractor
     for (k, v) in opts:
         if k == '-d': errfp = sys.stderr
@@ -328,11 +322,11 @@ def main(argv):
         elif k == '-c': encoding = v
         elif k == '-m': mode = v
         elif k == '-T': titleline = True
-        elif k == '-Z': ext = '.gz'
+        elif k == '-Z': gzipped = True
         elif k == '-L': klass = WikiLinkExtractor
         elif k == '-C': klass = WikiCategoryExtractor
-    if output.endswith('.cdb'):
-        writer = WikiDBWriter(output, encoding=encoding, ext=ext)
+    if output.endswith('.db'):
+        writer = WikiDB(output, gzipped=gzipped)
     else:
         writer = WikiFileWriter(
             output=output, pathpat=pathpat,
@@ -340,15 +334,14 @@ def main(argv):
     try:
         converter = Converter(writer, klass, errfp=errfp)
         for path in args:
-            if path.endswith('.cdb'):
-                reader = WikiDBReader(path, encoding=encoding, ext=ext)
-                for pageid in reader:
-                    (title, revids) = reader[pageid]
+            if path.endswith('.db'):
+                reader = WikiDB(path, gzipped=gzipped)
+                for (pageid,title) in reader:
+                    revids = reader[pageid]
                     converter.add_page(pageid, title)
-                    for revid in revids:
-                        wiki = reader.get_wiki(pageid, revid)
-                        converter.add_revid(pageid, revid)
-                        converter.feed_text(pageid, revid, wiki)
+                    for (revid,timestamp) in revids:
+                        data = reader.get_content(revid)
+                        converter.feed_text(pageid, revid, timestamp, data)
             else:
                 (path,fp) = getfp(path, encoding=encoding)
                 if path.endswith('.xml'):
@@ -357,8 +350,7 @@ def main(argv):
                     parser.close()
                 else:
                     converter.add_page(0, path)
-                    converter.add_revid(0, 0)
-                    converter.feed_file(0, 0, fp)
+                    converter.feed_file(0, 0, '', fp)
                 fp.close()
         converter.close()
     finally:

@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS MWPageTitleIndex ON MWPage(Title);
 CREATE TABLE IF NOT EXISTS MWRevision (
     RevId INTEGER PRIMARY KEY,
     PageId INTEGER NOT NULL,
-    Date TEXT,
+    Timestamp TEXT,
     Content BLOB
 );
 CREATE INDEX IF NOT EXISTS MWRevisionPageIdIndex ON MWRevision(PageId);
@@ -56,22 +56,22 @@ CREATE INDEX IF NOT EXISTS MWRevisionPageIdIndex ON MWRevision(PageId);
 
     def get_revids(self, pageid):
         cur = self._conn.cursor()
-        for (revid,) in cur.execute(
-                'SELECT RevId FROM MWRevision WHERE PageId = ?;',
+        for (revid,timestamp) in cur.execute(
+                'SELECT RevId,Timestamp FROM MWRevision WHERE PageId = ?;',
                 (pageid,)):
-            yield revid
+            yield (revid, timestamp)
         return
 
-    def get_rev(self, revid):
+    def get_content(self, revid):
         cur = self._conn.cursor()
-        for (date, content) in cur.execute(
-                'SELECT Date,Content FROM MWRevision WHERE RevId = ?;',
+        for (timestamp, content) in cur.execute(
+                'SELECT Content FROM MWRevision WHERE RevId = ?;',
                 (revid,)):
             if self.gzipped:
                 buf = io.BytesIO(content)
                 fp = gzip.GzipFile(mode='r', fileobj=buf)
                 content = fp.read().decode('utf-8')
-            return (date, content)
+            return content
         raise KeyError(revid)
 
     def add_page(self, pageid, title):
@@ -79,7 +79,7 @@ CREATE INDEX IF NOT EXISTS MWRevisionPageIdIndex ON MWRevision(PageId);
                            (pageid, title))
         return
 
-    def add_rev(self, pageid, revid, content, timestamp=None):
+    def add_content(self, pageid, revid, timestamp, content):
         if self.gzipped:
             buf = io.BytesIO()
             fp = gzip.GzipFile(mode='w', fileobj=buf)
@@ -119,7 +119,7 @@ class WikiFileWriter:
         self._title = title
         return
 
-    def add_rev(self, pageid, revid, data, timestamp=None):
+    def add_content(self, pageid, revid, timestamp, content):
         assert self._pageid == pageid
         assert self._title is not None
         if self.pathpat is not None:
@@ -132,11 +132,11 @@ class WikiFileWriter:
         if self.mode == 'page':
             if self.titleline:
                 self._fp.write(self._title+'\n')
-            self._fp.write(data)
+            self._fp.write(content)
             self._fp.write('\n\f')
         else:
             self._fp.write(self._title+'\t')
-            self._fp.write(data+'\n')
+            self._fp.write(content+'\n')
         return
 
 
@@ -149,7 +149,7 @@ def main(argv):
             print(pageid, title)
             (_,revids) = reader[pageid]
             for revid in revids:
-                data = reader.get_rev(revid)
+                data = reader.get_content(revid)
                 print(data)
             print()
     return

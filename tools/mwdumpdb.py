@@ -47,9 +47,9 @@ def main(argv):
                 continue
             if titleline:
                 outfp.write(title+'\n')
-            for revid in revids:
+            for (revid,timestamp) in revids:
                 try:
-                    (_,data) = reader.get_rev(revid)
+                    data = reader.get_content(revid)
                 except KeyError:
                     continue
                 outfp.write(data)

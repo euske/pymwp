@@ -40,7 +40,8 @@ class MWXMLDump2DB(MWXMLDumpFilter):
         return self._Stream(pageid, revid, timestamp)
 
     def close_file(self, fp):
-        self.writer.add_rev(fp.pageid, fp.revid, ''.join(fp.text), fp.timestamp)
+        text = ''.join(fp.text)
+        self.writer.add_content(fp.pageid, fp.revid, fp.timestamp, text)
         return
 
     def write_file(self, fp, text):
