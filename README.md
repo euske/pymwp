@@ -1,31 +1,32 @@
 PyMWP
 =====
 
-PyMWP (Python MediaWiki Parser) is a simple and robust parser 
+PyMWP (Python MediaWiki Parser) is a simple and robust parser
 for MediaWiki contents. It is suitable for analyzing or extracting
 information from Wikipedia articles.
+
 
 How to Install
 --------------
 
-  * Requires Python 2.4 or newer. (Python 3 is not supported.)
   * Download and unpack the source code.
   * Run `setup.py` to install:
 
     $ python setup.py install
+
 
 How to Use
 ----------
 
 **mwxml2wiki.py**
 
-Converts MediaWiki XML dump files into separate text files or CDB.
+Converts MediaWiki XML dump files into separate text files or Sqlite3.
 
 Examples
 
     $ mwxml2wiki.py -o all.wiki.gz enwiki-20140102-pages-articles.xml.bz2
 
-    $ mwxml2wiki.py -Z -o enwiki.wiki.cdb enwiki-20140102-pages-articles.xml.bz2
+    $ mwxml2wiki.py -Z -o enwiki.wiki.db enwiki-20140102-pages-articles.xml.bz2
 
     $ mwxml2wiki.py -P 'article%(pageid)08d.wiki' enwiki-20140102-pages-articles.xml.bz2
 
@@ -33,19 +34,17 @@ Options
 
   -o filename
     Specifies the output file name.
-    Supported ending suffixes: .gz, .bz2, .cdb
+    Supported ending suffixes: .gz, .bz2, .db
 
   -P pattern
     Output filename pattern.
 
   -Z
-    Gzip each record in cdb fiile.
+    Gzip each record in a database.
 
 **mwwiki2txt.py**
 
-Removes MediaWiki markup from wiki/CDB to text/CDB.
-Speed: it took about 4 days to convert all the current articles in English Wikipedia.
-(enwiki-20140102-pages-articles.xml.bz2)
+Convert wiki to text by removing MediaWiki markup.
 
 Examples
 
@@ -53,9 +52,9 @@ Examples
 
     $ mwwiki2txt.py -L article12.wiki > article12.link
 
-    $ mwwiki2txt.py -Z -o jawiki.txt.cdb jawiki-20140107-pages-articles.xml.bz2
+    $ mwwiki2txt.py -Z -o jawiki.txt.db jawiki-20140107-pages-articles.xml.bz2
 
-    $ mwwiki2txt.py -Z -o enwiki.txt.cdb enwiki.wiki.cdb
+    $ mwwiki2txt.py -Z -o enwiki.txt.db enwiki.wiki.db
 
     $ mwwiki2txt.py -o all.txt.bz2 jawiki-20140107-pages-articles.xml.bz2
 
@@ -65,13 +64,13 @@ Options
 
   -o filename
     Specifies the output file name.
-    Supported ending suffixes: .gz, .bz2, .cdb
+    Supported ending suffixes: .gz, .bz2, .db
 
   -P pattern
     Output filename pattern.
 
   -Z
-    Gzip each record in cdb fiile.
+    Gzip each record in a database.
 
   -L
     Extract keywords and links instead of text.
@@ -89,7 +88,7 @@ Terms and Conditions
 
 (This is so-called MIT/X License)
 
-Copyright (c) 2011-2013 Yusuke Shinyama <yusuke at cs dot nyu dot edu>
+Copyright (c) 2011-2020 Yusuke Shinyama <yusuke at cs dot nyu dot edu>
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the
