@@ -28,12 +28,15 @@ class MWXMLDump2DB(MWXMLDumpFilter):
 
     def start_page(self, pageid, title):
         MWXMLDumpFilter.start_page(self, pageid, title)
-        pageid = int(pageid)
-        self.writer.add_page(pageid, title)
+        if self.accept_page(pageid, title):
+            pageid = int(pageid)
+            self.writer.add_page(pageid, title)
         return
 
+    def accept_page(self, pageid, title):
+        return (':' not in title)
+
     def open_file(self, pageid, title, revid, timestamp):
-        if ':' in title: return None
         print(pageid, title, revid, file=sys.stderr)
         pageid = int(pageid)
         revid = int(revid)
@@ -61,8 +64,8 @@ class MWXMLDump2DB(MWXMLDumpFilter):
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-o output] [-P pathpat] [-c encoding] [-T] [-Z] '
-               '[file ...]' % argv[0])
+        print (f'usage: {argv[0]} [-o output] [-P pathpat] [-c encoding]'
+               ' [-T] [-Z] [file ...]')
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'o:P:c:TZ')

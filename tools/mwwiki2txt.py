@@ -53,7 +53,7 @@ class WikiTextExtractor(WikiTextParser):
         return
 
     def invalid_token(self, pos, token):
-        self.error('invalid token(%d): %r' % (pos, token))
+        self.error(f'invalid token({pos}): {token!r}')
         return
 
     def close(self):
@@ -139,7 +139,7 @@ class WikiLinkExtractor(WikiTextParser):
         return
 
     def invalid_token(self, pos, token):
-        self.error('invalid token(%d): %r' % (pos, token))
+        self.error(f'invalid token({pos}): {token!r}')
         return
 
     def close(self):
@@ -194,7 +194,7 @@ class WikiCategoryExtractor(WikiTextParser):
         return
 
     def invalid_token(self, pos, token):
-        self.error('invalid token(%d): %r' % (pos, token))
+        self.error(f'invalid token({pos}): {token!r}')
         return
 
     def close(self):
@@ -283,7 +283,7 @@ class Converter:
             parser.feed_text(text)
             self.writer.add_content(pageid, revid, timestamp, parser.close())
         except WikiParserError as e:
-            self.error('error: %r' % e)
+            self.error(f'error: {e!r}')
         return
 
     def feed_file(self, pageid, revid, timestamp, fp):
@@ -292,15 +292,15 @@ class Converter:
             parser.feed_file(fp)
             self.writer.add_content(pageid, revid, timestamp, parser.close())
         except WikiParserError as e:
-            self.error('error: %r' % e)
+            self.error(f'error: {e!r}')
         return
 
 # main
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-L|-C] [-d] [-o output] [-P pathpat] [-c encoding] [-T] [-Z] '
-               '[file ...]') % argv[0]
+        print (f'usage: {argv[0]} [-L|-C] [-d] [-o output]'
+               ' [-P pathpat] [-c encoding] [-T] [-Z] [file ...]')
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'LCdo:P:c:m:TZ')

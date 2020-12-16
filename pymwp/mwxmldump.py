@@ -96,12 +96,23 @@ class MWXMLDumpFilter(MWXMLDumpParser):
 
     def __init__(self):
         MWXMLDumpParser.__init__(self)
+        self._ok = False
         self._fp = None
+        return
+
+    def start_page(self, pageid, title):
+        MWXMLDumpParser.start_page(self, pageid, title)
+        self._ok = self.accept_page(pageid, title)
+        return
+
+    def end_page(self, pageid, title):
+        MWXMLDumpParser.end_page(self, pageid, title)
         return
 
     def start_revision(self, pageid, title, revid, timestamp):
         MWXMLDumpParser.start_revision(self, pageid, title, revid, timestamp)
-        self._fp = self.open_file(pageid, title, revid, timestamp)
+        if self._ok:
+            self._fp = self.open_file(pageid, title, revid, timestamp)
         return
 
     def end_revision(self, pageid, title, revid, timestamp):
@@ -116,6 +127,9 @@ class MWXMLDumpFilter(MWXMLDumpParser):
         if self._fp is not None:
             self.write_file(self._fp, text)
         return
+
+    def accept_page(self, pageid, title):
+        return True
 
     def open_file(self, pageid, title, revid, timestamp):
         raise NotImplementedError

@@ -14,8 +14,8 @@ from pymwp.mwdb import WikiDB
 def main(argv):
     import getopt
     def usage():
-        print ('usage: %s [-c encoding] [-o output] [-T] [-Z] '
-               'dbfile [pageid ...]' % argv[0])
+        print (f'usage: {argv[0]} [-c encoding] [-o output]'
+               ' [-T] [-Z] dbfile [pageid ...]')
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'o:c:TZ')

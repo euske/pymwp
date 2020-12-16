@@ -12,8 +12,7 @@ class Token:
         return
 
     def __repr__(self):
-        return ('<%s %r>' %
-                (self.__class__.__name__, self.name))
+        return f'<{self.__class__.__name__} {self.name!r}>'
 
     def add_char(self, c):
         self.name += c
@@ -101,8 +100,7 @@ class XMLTagToken(Token):
         return
 
     def __repr__(self):
-        return ('<%s %r>' %
-                (self.__class__.__name__, self.name))
+        return f'<{self.__class__.__name__} {self.name!r}>'
 
     def get_attr(self, name, value=None):
         return self.attrs.get(name, value)
@@ -115,9 +113,8 @@ class XMLStartTagToken(XMLTagToken):
         return
 
     def __repr__(self):
-        return ('<%s %r%s>' %
-                (self.__class__.__name__, self.name,
-                 ''.join( ' %r=%r' % (k,v) for (k,v) in self.attrs.iteritems() )))
+        attrs = ''.join( f' {k}={v}' for (k,v) in self.attrs.items() )
+        return f'<{self.__class__.__name__} {self.name!r} {attrs}>'
 
     def add_char(self, c):
         if self._value is not None:

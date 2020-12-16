@@ -25,7 +25,7 @@ class WikiTree:
         return
 
     def __repr__(self):
-        return ('<%s>' % self.__class__.__name__)
+        return f'<{self.__class__.__name__}>'
 
     def __iter__(self):
         return iter(self._subtree)
@@ -70,28 +70,28 @@ class WikiExtensionTree(WikiTree):
         self.token = token
         return
     def __repr__(self):
-        return '<%s %r>' % (self.__class__.__name__, self.token)
+        return f'<{self.__class__.__name__} {self.token!r}>'
 class WikiSpanTree(WikiTree):
     def __init__(self, token):
         WikiTree.__init__(self)
         self.token = token
         return
     def __repr__(self):
-        return '<%s %r>' % (self.__class__.__name__, self.token)
+        return f'<{self.__class__.__name__} {self.token!r}>'
 class WikiDivTree(WikiTree):
     def __init__(self, token):
         WikiTree.__init__(self)
         self.token = token
         return
     def __repr__(self):
-        return '<%s %r>' % (self.__class__.__name__, self.token)
+        return f'<{self.__class__.__name__} {self.token!r}>'
 class WikiXMLTree(WikiTree):
     def __init__(self, xml):
         WikiTree.__init__(self)
         self.xml = xml
         return
     def __repr__(self):
-        return '<%s %r>' % (self.__class__.__name__, self.xml)
+        return f'<{self.__class__.__name__} {self.xml!r}>'
     def get_attr(self, name, value=None):
         return self.xml.get_attr(name, value=value)
 class WikiXMLParTree(WikiXMLTree): pass

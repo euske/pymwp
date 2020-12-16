@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS MWRevisionPageIdIndex ON MWRevision(PageId);
 
     def get_content(self, revid):
         cur = self._conn.cursor()
-        for (timestamp, content) in cur.execute(
+        for (content,) in cur.execute(
                 'SELECT Content FROM MWRevision WHERE RevId = ?;',
                 (revid,)):
             if self.gzipped:
