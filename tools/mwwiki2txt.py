@@ -10,6 +10,7 @@
 #
 import re
 import sys
+import logging
 from pymwp.mwtokenizer import WikiToken
 from pymwp.mwtokenizer import XMLTagToken
 from pymwp.mwtokenizer import XMLEmptyTagToken
@@ -34,7 +35,7 @@ from pymwp.utils import getfp
 SPC = re.compile(r'\s+')
 def rmsp(s): return SPC.sub(' ', s)
 
-IGNORED = re.compile(u'^([-a-z]+|Category|Special):')
+IGNORED = re.compile('^([-a-z]+|Category|Special):')
 def isignored(name): return IGNORED.match(name)
 
 
@@ -42,14 +43,15 @@ def isignored(name): return IGNORED.match(name)
 ##
 class WikiTextExtractor(WikiTextParser):
 
-    def __init__(self, errfp=None):
+    def __init__(self, logger=None):
         WikiTextParser.__init__(self)
-        self.errfp = errfp
+        self.logger = logger
+        self.texts = []
         return
 
     def error(self, s):
-        if self.errfp is not None:
-            self.errfp.write(s+'\n')
+        if self.logger is not None:
+            self.logger.error(s)
         return
 
     def invalid_token(self, pos, token):
@@ -58,19 +60,19 @@ class WikiTextExtractor(WikiTextParser):
 
     def close(self):
         WikiTextParser.close(self)
-        texts = self.convert(self.get_root())
-        return u''.join(texts)
+        self.convert(self.get_root())
+        return ''.join(self.texts)
 
     def convert(self, tree):
         if tree is WikiToken.PAR:
-            yield u'\n'
+            self.texts.append('\n')
         elif isinstance(tree, XMLEmptyTagToken):
             if tree.name in XMLTagToken.BR_TAG:
-                yield u'\n'
+                self.texts.append('\n')
         elif isinstance(tree, str):
-            yield rmsp(tree)
+            self.texts.append(rmsp(tree))
         elif isinstance(tree, WikiToken):
-            yield rmsp(tree.name)
+            self.texts.append(rmsp(tree.name))
         elif isinstance(tree, WikiSpecialTree):
             pass
         elif isinstance(tree, WikiCommentTree):
@@ -80,10 +82,9 @@ class WikiTextExtractor(WikiTextParser):
                 pass
             else:
                 for c in tree:
-                    for x in self.convert(c):
-                        yield x
+                    self.convert(c)
                 if tree.xml.name in XMLTagToken.PAR_TAG:
-                    yield u'\n'
+                    self.texts.append('\n')
         elif isinstance(tree, WikiKeywordTree):
             if tree:
                 if isinstance(tree[0], WikiTree):
@@ -91,36 +92,29 @@ class WikiTextExtractor(WikiTextParser):
                 else:
                     name = tree[0]
                 if isinstance(name, str) and not isignored(name):
-                    for x in self.convert(tree[-1]):
-                        yield x
+                    self.convert(tree[-1])
         elif isinstance(tree, WikiLinkTree):
             if 2 <= len(tree):
                 for c in tree[1:]:
-                    for x in self.convert(c):
-                        yield x
-                    yield u' '
+                    self.convert(c)
+                    self.texts.append(' ')
             elif tree:
-                for x in self.convert(tree[0]):
-                    yield x
+                self.convert(tree[0])
         elif isinstance(tree, WikiTableCellTree):
             if tree:
-                for x in self.convert(tree[-1]):
-                    yield x
-                yield u'\n'
+                self.convert(tree[-1])
+                self.texts.append('\n')
         elif isinstance(tree, WikiTableTree):
             for c in tree:
                 if not isinstance(c, WikiArgTree):
-                    for x in self.convert(c):
-                        yield x
+                    self.convert(c)
         elif isinstance(tree, WikiDivTree):
             for c in tree:
-                for x in self.convert(c):
-                    yield x
-            yield u'\n'
+                self.convert(c)
+            self.texts.append('\n')
         elif isinstance(tree, WikiTree):
             for c in tree:
-                for x in self.convert(c):
-                    yield x
+                self.convert(c)
         return
 
 
@@ -128,14 +122,15 @@ class WikiTextExtractor(WikiTextParser):
 ##
 class WikiLinkExtractor(WikiTextParser):
 
-    def __init__(self, errfp=None):
+    def __init__(self, logger=None):
         WikiTextParser.__init__(self)
-        self.errfp = errfp
+        self.logger = logger
+        self.links = []
         return
 
     def error(self, s):
-        if self.errfp is not None:
-            self.errfp.write(s+'\n')
+        if self.logger is not None:
+            self.logger.error(s)
         return
 
     def invalid_token(self, pos, token):
@@ -144,8 +139,8 @@ class WikiLinkExtractor(WikiTextParser):
 
     def close(self):
         WikiTextParser.close(self)
-        texts = self.convert(self.get_root())
-        return u''.join(texts)
+        self.convert(self.get_root())
+        return self.links
 
     def convert(self, tree):
         if isinstance(tree, WikiKeywordTree):
@@ -155,11 +150,11 @@ class WikiLinkExtractor(WikiTextParser):
                 else:
                     name = tree[0]
                 if isinstance(name, str):
-                    out = (u'keyword', name)
+                    out = ('keyword', name)
                     if 2 <= len(tree) and not isignored(name):
                         text = tree[-1].get_text()
                         out += (text,)
-                    yield u'\t'.join(out)+u'\n'
+                    self.links.append(out)
         elif isinstance(tree, WikiLinkTree):
             if tree:
                 if isinstance(tree[0], WikiTree):
@@ -167,15 +162,14 @@ class WikiLinkExtractor(WikiTextParser):
                 else:
                     url = tree[0]
                 if isinstance(url, str):
-                    out = (u'link', url)
+                    out = ('link', url)
                     if 2 <= len(tree):
                         text = tree[-1].get_text()
                         out += (text,)
-                    yield u'\t'.join(out)+u'\n'
+                    self.links.append(out)
         elif isinstance(tree, WikiTree):
             for c in tree:
-                for x in self.convert(c):
-                    yield x
+                self.convert(c)
         return
 
 
@@ -183,14 +177,15 @@ class WikiLinkExtractor(WikiTextParser):
 ##
 class WikiCategoryExtractor(WikiTextParser):
 
-    def __init__(self, errfp=None):
+    def __init__(self, logger=None):
         WikiTextParser.__init__(self)
-        self.errfp = errfp
+        self.logger = logger
+        self.categories = []
         return
 
     def error(self, s):
-        if self.errfp is not None:
-            self.errfp.write(s+'\n')
+        if self.logger is not None:
+            self.logger.write(s)
         return
 
     def invalid_token(self, pos, token):
@@ -199,8 +194,8 @@ class WikiCategoryExtractor(WikiTextParser):
 
     def close(self):
         WikiTextParser.close(self)
-        texts = self.convert(self.get_root())
-        return u'\t'.join(texts)
+        self.convert(self.get_root())
+        return '\t'.join(self.categories)
 
     def convert(self, tree):
         if isinstance(tree, WikiKeywordTree):
@@ -210,11 +205,10 @@ class WikiCategoryExtractor(WikiTextParser):
                 else:
                     name = tree[0]
                 if isinstance(name, str) and name.startswith('Category:'):
-                    yield name
+                    self.categories.append(name)
         elif isinstance(tree, WikiTree):
             for c in tree:
-                for x in self.convert(c):
-                    yield x
+                self.convert(c)
         return
 
 
@@ -239,7 +233,7 @@ class MWDump2Text(MWXMLDumpFilter):
         return self._Stream(pageid, revid)
 
     def close_file(self, fp):
-        self.converter.feed_text(fp.pageid, fp.revid, u''.join(fp.text))
+        self.converter.feed_text(fp.pageid, fp.revid, ''.join(fp.text))
         return
 
     def write_file(self, fp, text):
@@ -258,18 +252,18 @@ class MWDump2Text(MWXMLDumpFilter):
 ##
 class Converter:
 
-    def __init__(self, writer, klass, errfp=None):
+    def __init__(self, writer, klass, logger=None):
         self.writer = writer
         self.klass = klass
-        self.errfp = errfp
+        self.logger = logger
         return
 
     def close(self):
         return
 
     def error(self, s):
-        if self.errfp is not None:
-            self.errfp.write(s+'\n')
+        if self.logger is not None:
+            self.logger.write(s)
         return
 
     def add_page(self, pageid, title):
@@ -278,7 +272,7 @@ class Converter:
         return
 
     def feed_text(self, pageid, revid, timestamp, text):
-        parser = self.klass(errfp=self.errfp)
+        parser = self.klass(logger=self.logger)
         try:
             parser.feed_text(text)
             self.writer.add_content(pageid, revid, timestamp, parser.close())
@@ -287,7 +281,7 @@ class Converter:
         return
 
     def feed_file(self, pageid, revid, timestamp, fp):
-        parser = self.klass(errfp=self.errfp)
+        parser = self.klass(logger=self.logger)
         try:
             parser.feed_file(fp)
             self.writer.add_content(pageid, revid, timestamp, parser.close())
@@ -307,7 +301,8 @@ def main(argv):
     except getopt.GetoptError:
         return usage()
     args = args or ['-']
-    errfp = None
+    level = logging.ERROR
+    logger = logging
     output = '-'
     encoding = 'utf-8'
     pathpat = None
@@ -316,7 +311,7 @@ def main(argv):
     gzipped = False
     klass = WikiTextExtractor
     for (k, v) in opts:
-        if k == '-d': errfp = sys.stderr
+        if k == '-d': level = logging.INFO
         elif k == '-o': output = v
         elif k == '-P': pathpat = v
         elif k == '-c': encoding = v
@@ -325,6 +320,8 @@ def main(argv):
         elif k == '-Z': gzipped = True
         elif k == '-L': klass = WikiLinkExtractor
         elif k == '-C': klass = WikiCategoryExtractor
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=level)
+
     if output.endswith('.db'):
         writer = WikiDB(output, gzipped=gzipped)
     else:
@@ -332,7 +329,7 @@ def main(argv):
             output=output, pathpat=pathpat,
             encoding=encoding, titleline=titleline, mode=mode)
     try:
-        converter = Converter(writer, klass, errfp=errfp)
+        converter = Converter(writer, klass, logger=logger)
         for path in args:
             if path.endswith('.db'):
                 reader = WikiDB(path, gzipped=gzipped)
